@@ -2623,38 +2623,42 @@ function MapToolbar({ mapRef }) {
         >−</button>
       </div>
 
-      {/* ── Search input — slides left out of the railing ── */}
+      {/* ── Search input — floating panel, slides left out of the railing ── */}
       <div style={{
         position: "absolute",
-        right: 44,
-        bottom: 44 * 2 + 1 + sp.xs, /* aligned to search button row */
-        width: searchOpen ? 240 : 0,
-        overflow: "hidden",
+        right: 44 + sp.sm,       /* sp.sm gap from railing edge */
+        bottom: sp.sm,            /* pinned to bottom, matching panel inset */
+        width: searchOpen ? 240 : 220,
         opacity: searchOpen ? 1 : 0,
-        transition: prefersReduced ? "none" : `width ${motion.medium} ${motion.easeOut}, opacity ${motion.medium} ${motion.easeOut}`,
+        transform: searchOpen ? "translateX(0)" : "translateX(12px)",
+        transition: prefersReduced ? "none" : `opacity ${motion.medium} ${motion.easeOut}, transform ${motion.medium} ${motion.easeOut}, width ${motion.medium} ${motion.easeOut}`,
         pointerEvents: searchOpen ? "auto" : "none",
+        background: t.glassBg,
+        border: `1px solid ${t.glassBorder}`,
+        borderRadius: sp.xs,
+        boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)",
+        padding: `${sp.sm}px`,
+        boxSizing: "border-box",
       }}>
-        <div style={{ width: 240, padding: `${sp.xs}px ${sp.sm}px`, background: t.bgBase, borderLeft: `1px solid ${t.borderDark}`, borderTop: `1px solid ${t.borderDark}`, borderBottom: `1px solid ${t.borderDark}`, boxSizing: "border-box" }}>
-          <div style={{ position: "relative" }}>
-            <Search size={13} color={t.textSubtle} style={{ position: "absolute", left: sp.sm, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-            <input
-              ref={inputRef}
-              placeholder="Search address, LOI or device ID"
-              aria-label="Search"
-              style={{
-                width: "100%", height: 32,
-                padding: `0 ${sp.sm}px 0 ${sp.xl + sp.xs}px`,
-                background: t.bgField, border: `1px solid ${t.borderDark}`, borderRadius: sp.xs,
-                ...type.body, fontSize: 12,
-                color: t.textPrimary, outline: "none",
-                transition: `border-color ${motion.fast}`,
-                boxSizing: "border-box",
-              }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = t.borderSubtle)}
-              onBlur={(e) => (e.currentTarget.style.borderColor = t.borderDark)}
-              onKeyDown={(e) => e.key === "Escape" && setSearchOpen(false)}
-            />
-          </div>
+        <div style={{ position: "relative" }}>
+          <Search size={13} color={t.textSubtle} style={{ position: "absolute", left: sp.sm, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+          <input
+            ref={inputRef}
+            placeholder="Search address, LOI or device ID"
+            aria-label="Search"
+            style={{
+              width: "100%", height: 32,
+              padding: `0 ${sp.sm}px 0 ${sp.xl + sp.xs}px`,
+              background: t.bgField, border: `1px solid ${t.borderDark}`, borderRadius: sp.xs,
+              ...type.body, fontSize: 12,
+              color: t.textPrimary, outline: "none",
+              transition: `border-color ${motion.fast}`,
+              boxSizing: "border-box",
+            }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = t.borderSubtle)}
+            onBlur={(e) => (e.currentTarget.style.borderColor = t.borderDark)}
+            onKeyDown={(e) => e.key === "Escape" && setSearchOpen(false)}
+          />
         </div>
       </div>
 
