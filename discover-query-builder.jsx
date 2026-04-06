@@ -512,6 +512,9 @@ export default function DiscoverQueryBuilder() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState(null);
 
+  /* ── Shared map ref (set by MapPlaceholder once the map initialises) ── */
+  const sharedMapRef = useRef(null);
+
   // ── Computed ──
   const totalConditions = useMemo(() => groups.reduce((s, g) => s + g.conditions.length, 0), [groups]);
 
@@ -1040,7 +1043,7 @@ export default function DiscoverQueryBuilder() {
 
       {/* ═══ MAP AREA ═══ */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        <MapPlaceholder sources={sources} filteredCounts={filteredCounts} baseMap={baseMap} heatmapEnabled={heatmapEnabled} drawerOpen={drawerOpen} onDeviceClick={(device) => { setSelectedDevice(device); setDrawerOpen(true); }} />
+        <MapPlaceholder sources={sources} filteredCounts={filteredCounts} baseMap={baseMap} heatmapEnabled={heatmapEnabled} drawerOpen={drawerOpen} onDeviceClick={(device) => { setSelectedDevice(device); setDrawerOpen(true); }} onMapReady={(map) => { sharedMapRef.current = map; }} />
       </div>
 
       {/* ═══ DEVICE DETAILS PANEL ═══ — slides in flush against the right railing */}
@@ -1078,7 +1081,7 @@ export default function DiscoverQueryBuilder() {
         zIndex: 11,
         width: 44,
       }}>
-        <MapToolbar />
+        <MapToolbar mapRef={sharedMapRef} />
       </div>
 
       {/* ═══ SAVE MODAL ═══ */}
@@ -2537,33 +2540,124 @@ function ToolbarBtn({ icon: Icon, label, size }) {
   );
 }
 
-function MapToolbar() {
+function MapToolbar({ mapRef }) {
+  const [searchOpen, setSearchOpen] = useState(false);
+  const inputRef = useRef(null);
+  const prefersReduced = useReducedMotion();
+
+  const toggleSearch = () => {
+    setSearchOpen((v) => {
+      if (!v) setTimeout(() => inputRef.current?.focus(), 50);
+      return !v;
+    });
+  };
+
   return (
-    <div style={{
-      width: 44,
-      height: "100%",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      background: t.bgBase,
-      borderLeft: `1px solid ${t.borderDark}`,
-      paddingTop: sp.xs,
-      boxSizing: "border-box",
-    }}>
-      <ToolbarBtn icon={Search}   label="Search" />
-      <ToolbarDivider />
-      <ToolbarBtn icon={Flag}     label="Flag" />
-      <ToolbarDivider />
-      <ToolbarBtn icon={Layers}   label="Layers" />
-      <ToolbarBtn icon={Ruler}    label="Measure" />
-      <ToolbarBtn icon={Pentagon} label="Draw Shape" />
-      <ToolbarDivider />
-      <ToolbarBtn icon={Box}      label="3D View" />
-      {/* Spacer pushes bottom buttons down */}
+    <div style={{ width: 44, height: "100%", display: "flex", flexDirection: "column", alignItems: "center", background: t.bgBase, borderLeft: `1px solid ${t.borderDark}`, boxSizing: "border-box", position: "relative" }}>
+
+      {/* ── Top group ── */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: sp.xs }}>
+        <ToolbarBtn icon={Flag}     label="Flag" />
+        <ToolbarDivider />
+        <ToolbarBtn icon={Layers}   label="Layers" />
+        <ToolbarBtn icon={Ruler}    label="Measure" />
+        <ToolbarBtn icon={Pentagon} label="Draw Shape" />
+        <ToolbarDivider />
+        <ToolbarBtn icon={Box}      label="3D View" />
+      </div>
+
+      {/* ── Spacer ── */}
       <div style={{ flex: 1 }} />
-      <ToolbarDivider />
-      <ToolbarBtn icon={Home}     label="Home" />
-      <ToolbarBtn icon={Settings} label="Settings" />
+
+      {/* ── Bottom group: search + zoom ── */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingBottom: sp.xs }}>
+        <ToolbarDivider />
+
+        {/* Search toggle */}
+        <button
+          title="Search"
+          aria-label="Search"
+          onClick={toggleSearch}
+          style={{
+            width: 44, height: 44, padding: 0,
+            background: searchOpen ? t.bgField : "transparent", border: "none",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", outline: "none", flexShrink: 0,
+            transition: `background ${motion.fast}`,
+          }}
+          onMouseEnter={(e) => { if (!searchOpen) { e.currentTarget.style.background = t.bgHover; e.currentTarget.querySelector("svg").style.color = t.textSecondary; } }}
+          onMouseLeave={(e) => { if (!searchOpen) { e.currentTarget.style.background = "transparent"; e.currentTarget.querySelector("svg").style.color = searchOpen ? t.textPrimary : t.textSubtle; } }}
+          onMouseDown={(e) => (e.currentTarget.dataset.mousedown = "1")}
+          onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
+          onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
+        >
+          <Search size={16} color={searchOpen ? t.textPrimary : t.textSubtle} />
+        </button>
+
+        <ToolbarDivider />
+
+        {/* Zoom in */}
+        <button
+          title="Zoom in"
+          aria-label="Zoom in"
+          onClick={() => mapRef?.current?.zoomIn()}
+          style={{ width: 44, height: 44, padding: 0, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", outline: "none", flexShrink: 0, transition: `background ${motion.fast}`, color: t.textSubtle, fontSize: 18, fontWeight: 300, lineHeight: 1, userSelect: "none" }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; e.currentTarget.style.color = t.textPrimary; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = t.textSubtle; }}
+          onMouseDown={(e) => (e.currentTarget.dataset.mousedown = "1")}
+          onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
+          onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
+        >+</button>
+
+        {/* Zoom out */}
+        <button
+          title="Zoom out"
+          aria-label="Zoom out"
+          onClick={() => mapRef?.current?.zoomOut()}
+          style={{ width: 44, height: 44, padding: 0, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", outline: "none", flexShrink: 0, transition: `background ${motion.fast}`, color: t.textSubtle, fontSize: 18, fontWeight: 300, lineHeight: 1, userSelect: "none" }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; e.currentTarget.style.color = t.textPrimary; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = t.textSubtle; }}
+          onMouseDown={(e) => (e.currentTarget.dataset.mousedown = "1")}
+          onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
+          onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
+        >−</button>
+      </div>
+
+      {/* ── Search input — slides left out of the railing ── */}
+      <div style={{
+        position: "absolute",
+        right: 44,
+        bottom: 44 * 2 + 1 + sp.xs, /* aligned to search button row */
+        width: searchOpen ? 240 : 0,
+        overflow: "hidden",
+        opacity: searchOpen ? 1 : 0,
+        transition: prefersReduced ? "none" : `width ${motion.medium} ${motion.easeOut}, opacity ${motion.medium} ${motion.easeOut}`,
+        pointerEvents: searchOpen ? "auto" : "none",
+      }}>
+        <div style={{ width: 240, padding: `${sp.xs}px ${sp.sm}px`, background: t.bgBase, borderLeft: `1px solid ${t.borderDark}`, borderTop: `1px solid ${t.borderDark}`, borderBottom: `1px solid ${t.borderDark}`, boxSizing: "border-box" }}>
+          <div style={{ position: "relative" }}>
+            <Search size={13} color={t.textSubtle} style={{ position: "absolute", left: sp.sm, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+            <input
+              ref={inputRef}
+              placeholder="Search address, LOI or device ID"
+              aria-label="Search"
+              style={{
+                width: "100%", height: 32,
+                padding: `0 ${sp.sm}px 0 ${sp.xl + sp.xs}px`,
+                background: t.bgField, border: `1px solid ${t.borderDark}`, borderRadius: sp.xs,
+                ...type.body, fontSize: 12,
+                color: t.textPrimary, outline: "none",
+                transition: `border-color ${motion.fast}`,
+                boxSizing: "border-box",
+              }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = t.borderSubtle)}
+              onBlur={(e) => (e.currentTarget.style.borderColor = t.borderDark)}
+              onKeyDown={(e) => e.key === "Escape" && setSearchOpen(false)}
+            />
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }
@@ -2688,7 +2782,7 @@ const DEVICE_MARKERS = [
   { id: "DEV-012", lng: -74.0071, lat: 40.7445, color: "#4A9EFF" },
 ];
 
-function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled, drawerOpen, onDeviceClick }) {
+function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled, drawerOpen, onDeviceClick, onMapReady }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
@@ -2762,6 +2856,7 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled, draw
     });
 
     mapRef.current = map;
+    onMapReady?.(map);
     return () => {
       markersRef.current = [];
       map.remove();
@@ -2774,44 +2869,9 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled, draw
     if (mapRef.current) mapRef.current.setStyle(styleUrl);
   }, [styleUrl]);
 
-  const btnBase = {
-    width: 28, height: 28,
-    display: "flex", alignItems: "center", justifyContent: "center",
-    background: t.bgBase,
-    border: `1px solid ${t.borderDark}`,
-    borderRadius: sp.xs,
-    color: t.textSecondary,
-    cursor: "pointer",
-    fontSize: 16,
-    fontWeight: 300,
-    lineHeight: 1,
-    outline: "none",
-    transition: `background ${motion.fast}, color ${motion.fast}`,
-    userSelect: "none",
-  };
-
   return (
     <div className="mapbox-scope" style={{ width: "100%", height: "100%", position: "relative" }}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
-
-      {/* Custom zoom controls */}
-      <div style={{ position: "absolute", bottom: sp.md, right: 44 + sp.md, display: "flex", flexDirection: "column", gap: 2 }}>
-        <button
-          style={btnBase}
-          onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; e.currentTarget.style.color = t.textPrimary; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = t.bgBase; e.currentTarget.style.color = t.textSecondary; }}
-          onClick={() => mapRef.current?.zoomIn()}
-          aria-label="Zoom in"
-        >+</button>
-        <button
-          style={btnBase}
-          onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; e.currentTarget.style.color = t.textPrimary; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = t.bgBase; e.currentTarget.style.color = t.textSecondary; }}
-          onClick={() => mapRef.current?.zoomOut()}
-          aria-label="Zoom out"
-        >−</button>
-      </div>
-
     </div>
   );
 }
