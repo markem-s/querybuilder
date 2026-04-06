@@ -1174,7 +1174,7 @@ function QBarIcon({ icon, title, onClick, accent }) {
         alignItems: "center",
         justifyContent: "center",
         borderRadius: sp.xs,
-        border: accent ? "none" : `1px solid ${hovered ? t.yellow700 : t.borderLight}`,
+        border: "none",
         background: accent ? t.yellow500 : hovered ? t.bgHover : "transparent",
         color: accent ? t.textInverse : hovered ? t.textPrimary : t.textSecondary,
         cursor: "pointer",
