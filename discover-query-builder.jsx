@@ -57,10 +57,6 @@ import {
   Cuboid,
   ScanLine,
   Ruler,
-  CircleIcon,
-  Spline,
-  Flame,
-  ImageIcon,
   Pentagon,
   MonitorSmartphone,
   Home,
@@ -96,38 +92,53 @@ const t = {
 };
 
 /* ── Layer type icon map ── */
-function HexbinIcon({ size = 14, color = "currentColor" }) {
-  const r = size / 2;
-  const h = r * 0.866;
-  const pts = [
-    [r, 0], [r + h * 0.6, r * 0.5], [r + h * 0.6, r * 1.5],
-    [r, r * 2], [r - h * 0.6, r * 1.5], [r - h * 0.6, r * 0.5],
-  ].map(([x, y]) => `${x},${y}`).join(" ");
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none" style={{ display: "block", flexShrink: 0 }}>
-      <polygon points={pts} stroke={color} strokeWidth={1.5} fill="none" />
-    </svg>
-  );
-}
-
-function ArcIcon({ size = 14, color = "currentColor" }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 14 14" fill="none" style={{ display: "block", flexShrink: 0 }}>
-      <path d="M2 12 Q7 1 12 12" stroke={color} strokeWidth={1.5} fill="none" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function LayerTypeIcon({ type, color, size = 13 }) {
-  const props = { size, color };
+function LayerTypeIcon({ type, color, size = 10 }) {
+  const s = { display: "block", flexShrink: 0 };
+  const sw = 1.4;
   switch (type) {
-    case "point":   return <CircleIcon {...props} />;
-    case "hexbin":  return <HexbinIcon size={size} color={color} />;
-    case "arc":     return <ArcIcon size={size} color={color} />;
-    case "icon":    return <ImageIcon {...props} />;
-    case "heatmap": return <Flame {...props} />;
-    case "line":    return <Spline {...props} />;
-    default:        return <CircleIcon {...props} />;
+    case "point":
+      return (
+        <svg width={size} height={size} viewBox="0 0 10 10" fill="none" style={s}>
+          <circle cx="5" cy="5" r="3.5" stroke={color} strokeWidth={sw} />
+        </svg>
+      );
+    case "hexbin":
+      return (
+        <svg width={size} height={size} viewBox="0 0 10 10" fill="none" style={s}>
+          <polygon points="5,1 8.5,3 8.5,7 5,9 1.5,7 1.5,3" stroke={color} strokeWidth={sw} />
+        </svg>
+      );
+    case "arc":
+      return (
+        <svg width={size} height={size} viewBox="0 0 10 10" fill="none" style={s}>
+          <path d="M1 9 Q5 1 9 9" stroke={color} strokeWidth={sw} strokeLinecap="round" />
+        </svg>
+      );
+    case "heatmap":
+      return (
+        <svg width={size} height={size} viewBox="0 0 10 10" fill="none" style={s}>
+          <path d="M5 9C3 9 1.5 7.5 1.5 6c0-1 .5-1.8 1-2.5C3 2.5 3 1.5 3 1c.7.5 1 1.2 1 2 .5-.5.8-1.2.8-2 1.2.8 2.2 2.2 2.2 4 0 1.5-1 2.8-2 4z" stroke={color} strokeWidth={sw} strokeLinejoin="round" />
+        </svg>
+      );
+    case "icon":
+      return (
+        <svg width={size} height={size} viewBox="0 0 10 10" fill="none" style={s}>
+          <rect x="1" y="2" width="8" height="6" rx="1" stroke={color} strokeWidth={sw} />
+          <path d="M1 7l2.5-2.5 2 2 1.5-1.5L9 7" stroke={color} strokeWidth={sw} strokeLinejoin="round" />
+        </svg>
+      );
+    case "line":
+      return (
+        <svg width={size} height={size} viewBox="0 0 10 10" fill="none" style={s}>
+          <path d="M1 8 C3 8 3 2 5 5 S7 2 9 2" stroke={color} strokeWidth={sw} strokeLinecap="round" />
+        </svg>
+      );
+    default:
+      return (
+        <svg width={size} height={size} viewBox="0 0 10 10" fill="none" style={s}>
+          <circle cx="5" cy="5" r="3.5" stroke={color} strokeWidth={sw} />
+        </svg>
+      );
   }
 }
 
@@ -1474,7 +1485,7 @@ function SourceRow({ source, filteredCount, isFiltered, onToggle, onUpdateLayer,
 
         {/* Layer type icon — carries the source color */}
         <span style={{ flexShrink: 0, marginTop: 2, display: "flex", alignItems: "center" }} aria-hidden="true">
-          <LayerTypeIcon type={source.layerType} color={source.color} size={11} />
+          <LayerTypeIcon type={source.layerType} color={source.color} size={8} />
         </span>
 
         {/* Name + counter stacked */}
