@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
-import { DeviceDetailsDrawer } from "@drawer/components/DeviceDetailsDrawer";
+import { DeviceDetailsContent } from "@drawer/components/DeviceDetailsContent";
 
 mapboxgl.accessToken = (typeof __MAPBOX_TOKEN__ !== "undefined" ? __MAPBOX_TOKEN__ : (typeof import.meta !== "undefined" && import.meta.env?.VITE_MAPBOX_TOKEN)) || "";
 import {
@@ -504,6 +504,10 @@ export default function DiscoverQueryBuilder() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   /* GAP 4: Load Query flow */
   const [showLoadModal, setShowLoadModal] = useState(false);
+
+  /* ── Device drawer ── */
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState(null);
 
   // ── Computed ──
   const totalConditions = useMemo(() => groups.reduce((s, g) => s + g.conditions.length, 0), [groups]);
@@ -1045,7 +1049,34 @@ export default function DiscoverQueryBuilder() {
 
       {/* ═══ MAP AREA ═══ */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        <MapPlaceholder sources={sources} filteredCounts={filteredCounts} baseMap={baseMap} heatmapEnabled={heatmapEnabled} />
+        <MapPlaceholder sources={sources} filteredCounts={filteredCounts} baseMap={baseMap} heatmapEnabled={heatmapEnabled} drawerOpen={drawerOpen} onDeviceClick={(device) => { setSelectedDevice(device); setDrawerOpen(true); }} />
+      </div>
+
+      {/* ═══ DEVICE DETAILS PANEL ═══ — mirrors query builder sidebar, slides in from right */}
+      <div
+        role="region"
+        aria-label="Device Details"
+        aria-hidden={!drawerOpen}
+        style={{
+          position: "absolute",
+          top: sp.sm,
+          right: sp.sm,
+          bottom: sp.sm,
+          zIndex: 10,
+          width: 320,
+          background: t.glassBg,
+          borderRadius: sp.xs,
+          border: `1px solid ${t.glassBorder}`,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          opacity: drawerOpen ? 1 : 0,
+          transform: drawerOpen ? "translateX(0)" : "translateX(16px)",
+          pointerEvents: drawerOpen ? "auto" : "none",
+          transition: prefersReduced ? "none" : `opacity ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}, transform ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}`,
+        }}
+      >
+        <DeviceDetailsContent onClose={() => { setDrawerOpen(false); setSelectedDevice(null); }} />
       </div>
 
       {/* ═══ SAVE MODAL ═══ */}
@@ -2587,13 +2618,16 @@ const DEVICE_MARKERS = [
   { id: "DEV-012", lng: -74.0071, lat: 40.7445, color: "#4A9EFF" },
 ];
 
-function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled }) {
+function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled, drawerOpen, onDeviceClick }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState(null);
   const styleUrl = MAPBOX_STYLES[baseMap] || MAPBOX_STYLES.darkmatter;
+
+  // Deactivate all markers when drawer closes from outside
+  useEffect(() => {
+    if (!drawerOpen) markersRef.current.forEach((m) => m.el.classList.remove("active"));
+  }, [drawerOpen]);
 
   // Inject Mapbox CSS scoped to .mapbox-scope
   useEffect(() => {
@@ -2646,8 +2680,7 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled }) {
           // Deactivate all, activate clicked
           markersRef.current.forEach((m) => m.el.classList.remove("active"));
           el.classList.add("active");
-          setSelectedDevice(device);
-          setDrawerOpen(true);
+          onDeviceClick?.(device);
         });
 
         const marker = new mapboxgl.Marker({ element: el })
@@ -2670,11 +2703,6 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled }) {
   useEffect(() => {
     if (mapRef.current) mapRef.current.setStyle(styleUrl);
   }, [styleUrl]);
-
-  const handleDrawerClose = () => {
-    setDrawerOpen(false);
-    markersRef.current.forEach((m) => m.el.classList.remove("active"));
-  };
 
   const btnBase = {
     width: 28, height: 28,
@@ -2714,8 +2742,6 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled }) {
         >−</button>
       </div>
 
-      {/* Device Details Drawer */}
-      <DeviceDetailsDrawer isOpen={drawerOpen} onClose={handleDrawerClose} />
     </div>
   );
 }
