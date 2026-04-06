@@ -2626,7 +2626,7 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled }) {
   const btnBase = {
     width: 28, height: 28,
     display: "flex", alignItems: "center", justifyContent: "center",
-    background: t.bgRaised,
+    background: t.bgBase,
     border: `1px solid ${t.borderDark}`,
     borderRadius: sp.xs,
     color: t.textSecondary,
@@ -2647,14 +2647,14 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled }) {
         <button
           style={btnBase}
           onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; e.currentTarget.style.color = t.textPrimary; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = t.bgRaised; e.currentTarget.style.color = t.textSecondary; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = t.bgBase; e.currentTarget.style.color = t.textSecondary; }}
           onClick={() => mapRef.current?.zoomIn()}
           aria-label="Zoom in"
         >+</button>
         <button
           style={btnBase}
           onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; e.currentTarget.style.color = t.textPrimary; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = t.bgRaised; e.currentTarget.style.color = t.textSecondary; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = t.bgBase; e.currentTarget.style.color = t.textSecondary; }}
           onClick={() => mapRef.current?.zoomOut()}
           aria-label="Zoom out"
         >−</button>
