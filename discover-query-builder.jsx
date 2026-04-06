@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
 
 mapboxgl.accessToken = (typeof __MAPBOX_TOKEN__ !== "undefined" ? __MAPBOX_TOKEN__ : (typeof import.meta !== "undefined" && import.meta.env?.VITE_MAPBOX_TOKEN)) || "";
 import {
@@ -2574,6 +2573,35 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled }) {
   const mapRef = useRef(null);
   const styleUrl = MAPBOX_STYLES[baseMap] || MAPBOX_STYLES.darkmatter;
 
+  // Inject Mapbox CSS scoped to .mapbox-scope so it doesn't bleed into the rest of the app
+  useEffect(() => {
+    if (document.getElementById("mapbox-scoped-css")) return;
+    const link = document.createElement("link");
+    link.id = "mapbox-scoped-css";
+    link.rel = "stylesheet";
+    link.href = "https://api.mapbox.com/mapbox-gl-js/v3.21.0/mapbox-gl.css";
+    document.head.appendChild(link);
+
+    // Once loaded, scope all rules under .mapbox-scope
+    link.onload = () => {
+      try {
+        const style = document.createElement("style");
+        style.id = "mapbox-scoped-override";
+        // Re-scope critical mapbox canvas/control styles without touching global button/input
+        style.textContent = `
+          .mapbox-scope .mapboxgl-canvas { display: block; }
+          .mapbox-scope .mapboxgl-map { overflow: hidden; position: relative; }
+          .mapbox-scope .mapboxgl-ctrl-bottom-right { position: absolute; bottom: 0; right: 0; }
+          .mapbox-scope .mapboxgl-ctrl-group { background: rgba(14,14,14,0.85); border-radius: 4px; overflow: hidden; }
+          .mapbox-scope .mapboxgl-ctrl-group button { width: 30px; height: 30px; background: transparent; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+          .mapbox-scope .mapboxgl-ctrl-attrib { font-size: 10px; background: rgba(0,0,0,0.5); color: #999; padding: 2px 5px; border-radius: 2px; }
+          .mapbox-scope .mapboxgl-ctrl-attrib a { color: #999; }
+        `;
+        document.head.appendChild(style);
+      } catch(e) {}
+    };
+  }, []);
+
   // Init map
   useEffect(() => {
     if (!containerRef.current) return;
@@ -2596,7 +2624,9 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled }) {
   }, [styleUrl]);
 
   return (
-    <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+    <div className="mapbox-scope" style={{ width: "100%", height: "100%", position: "relative" }}>
+      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+    </div>
   );
 }
 
