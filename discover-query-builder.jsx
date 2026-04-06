@@ -1038,48 +1038,47 @@ export default function DiscoverQueryBuilder() {
           </div>
         </div>
 
-      {/* ═══ MAP TOOLBAR ═══ — positioned next to expand btn / sidebar, 4px gap */}
-      <div style={{
-        position: "absolute",
-        top: sp.sm,
-        left: panelCollapsed ? (sp.sm + 44 + sp.xs) : (sp.sm + 320 + sp.xs),
-        right: sp.sm,
-        zIndex: 10,
-        transition: prefersReduced ? "none" : `left ${motion.slow} ${motion.easeOut}`,
-      }}>
-        <MapToolbar />
-      </div>
-
       {/* ═══ MAP AREA ═══ */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
         <MapPlaceholder sources={sources} filteredCounts={filteredCounts} baseMap={baseMap} heatmapEnabled={heatmapEnabled} drawerOpen={drawerOpen} onDeviceClick={(device) => { setSelectedDevice(device); setDrawerOpen(true); }} />
       </div>
 
-      {/* ═══ DEVICE DETAILS PANEL ═══ — mirrors query builder sidebar, slides in from right */}
+      {/* ═══ DEVICE DETAILS PANEL ═══ — slides in flush against the right railing */}
       <div
         role="region"
         aria-label="Device Details"
         aria-hidden={!drawerOpen}
         style={{
           position: "absolute",
-          top: sp.sm,
-          right: sp.sm,
-          bottom: sp.sm,
+          top: 0,
+          right: 44, /* railing width */
+          bottom: 0,
           zIndex: 10,
           width: 320,
           background: t.glassBg,
-          borderRadius: sp.xs,
-          border: `1px solid ${t.glassBorder}`,
+          borderLeft: `1px solid ${t.glassBorder}`,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
           opacity: drawerOpen ? 1 : 0,
-          transform: drawerOpen ? "translateX(0)" : "translateX(16px)",
+          transform: drawerOpen ? "translateX(0)" : "translateX(320px)",
           pointerEvents: drawerOpen ? "auto" : "none",
           transition: prefersReduced ? "none" : `opacity ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}, transform ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}`,
         }}
       >
         <DevicePanel device={selectedDevice} onClose={() => { setDrawerOpen(false); setSelectedDevice(null); }} />
+      </div>
+
+      {/* ═══ RIGHT RAILING TOOLBAR ═══ */}
+      <div style={{
+        position: "absolute",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 11,
+        width: 44,
+      }}>
+        <MapToolbar />
       </div>
 
       {/* ═══ SAVE MODAL ═══ */}
@@ -2510,7 +2509,7 @@ function ToggleRow({ label, checked, onChange }) {
    ══════════════════════════════════════════════════════════════ */
 function ToolbarDivider() {
   return (
-    <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.1)", margin: `0 ${sp.xs}px`, flexShrink: 0 }} />
+    <div style={{ width: 24, height: 1, background: t.borderDark, margin: `${sp.xs}px 0`, flexShrink: 0 }} />
   );
 }
 
@@ -2521,16 +2520,17 @@ function ToolbarBtn({ icon: Icon, label, size }) {
       title={label}
       aria-label={label}
       style={{
-        width: 32, height: 32, padding: 0,
-        background: "rgba(8,8,8,0.8)", border: "none", borderRadius: sp.xs,
+        width: 44, height: 44, padding: 0,
+        background: "transparent", border: "none",
         display: "flex", alignItems: "center", justifyContent: "center",
-        cursor: "pointer", outline: "none",
+        cursor: "pointer", outline: "none", flexShrink: 0,
         transition: `background ${motion.fast}`,
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; e.currentTarget.querySelector("svg").style.color = t.textPrimary; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(8,8,8,0.8)"; e.currentTarget.querySelector("svg").style.color = t.textSubtle; }}
-      onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-      onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
+      onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; e.currentTarget.querySelector("svg").style.color = t.textSecondary; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.querySelector("svg").style.color = t.textSubtle; }}
+      onMouseDown={(e) => (e.currentTarget.dataset.mousedown = "1")}
+      onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
+      onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
     >
       <Icon size={sz} color={t.textSubtle} />
     </button>
@@ -2540,52 +2540,30 @@ function ToolbarBtn({ icon: Icon, label, size }) {
 function MapToolbar() {
   return (
     <div style={{
-      width: "100%", height: 44, display: "flex", alignItems: "center", gap: sp.md,
-      padding: `0 ${sp.md}px`,
-      background: t.glassBg,
-      borderRadius: sp.xs,
-      border: `1px solid ${t.glassBorder}`,
+      width: 44,
+      height: "100%",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      background: t.bgBase,
+      borderLeft: `1px solid ${t.borderDark}`,
+      paddingTop: sp.xs,
       boxSizing: "border-box",
     }}>
-
-      {/* ── Search input ── */}
-      <div style={{ flex: "0 1 auto", display: "flex", justifyContent: "flex-start", minWidth: 0 }}>
-        <div style={{ position: "relative", width: "auto", minWidth: 200 }}>
-          <Search size={14} color={t.textSubtle} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-          <input
-            placeholder="Search address, LOI or device IDs"
-            aria-label="Search address, LOI or device IDs"
-            style={{
-              width: 240, height: 33,
-              padding: `0 13px 0 37px`,
-              ...type.body, fontSize: 12,
-              background: t.bgBase, border: `1px solid #2b2b2b`, borderRadius: sp.sm,
-              color: t.textPrimary, outline: "none",
-              transition: `border-color ${motion.fast}`,
-            }}
-            onFocus={(e) => (e.currentTarget.style.borderColor = t.borderSubtle)}
-            onBlur={(e) => (e.currentTarget.style.borderColor = "#2b2b2b")}
-          />
-        </div>
-      </div>
-
-      {/* ── Spacer ── */}
+      <ToolbarBtn icon={Search}   label="Search" />
+      <ToolbarDivider />
+      <ToolbarBtn icon={Flag}     label="Flag" />
+      <ToolbarDivider />
+      <ToolbarBtn icon={Layers}   label="Layers" />
+      <ToolbarBtn icon={Ruler}    label="Measure" />
+      <ToolbarBtn icon={Pentagon} label="Draw Shape" />
+      <ToolbarDivider />
+      <ToolbarBtn icon={Box}      label="3D View" />
+      {/* Spacer pushes bottom buttons down */}
       <div style={{ flex: 1 }} />
-
-      {/* ── Right group: tool buttons ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 0, flexShrink: 0 }}>
-        <ToolbarBtn icon={Flag} label="Flag" />
-        <ToolbarDivider />
-        <ToolbarBtn icon={Layers} label="Layers" />
-        <ToolbarBtn icon={Ruler} label="Measure" />
-        <ToolbarBtn icon={Pentagon} label="Draw Shape" />
-        <ToolbarDivider />
-        <ToolbarBtn icon={MonitorSmartphone} label="Monitor" />
-        <ToolbarBtn icon={Box} label="3D View" />
-        <ToolbarDivider />
-        <ToolbarBtn icon={Home} label="Home" />
-        <ToolbarBtn icon={Settings} label="Settings" />
-      </div>
+      <ToolbarDivider />
+      <ToolbarBtn icon={Home}     label="Home" />
+      <ToolbarBtn icon={Settings} label="Settings" />
     </div>
   );
 }
@@ -2817,7 +2795,7 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled, draw
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
 
       {/* Custom zoom controls */}
-      <div style={{ position: "absolute", bottom: sp.md, right: sp.md, display: "flex", flexDirection: "column", gap: 2 }}>
+      <div style={{ position: "absolute", bottom: sp.md, right: 44 + sp.md, display: "flex", flexDirection: "column", gap: 2 }}>
         <button
           style={btnBase}
           onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; e.currentTarget.style.color = t.textPrimary; }}
