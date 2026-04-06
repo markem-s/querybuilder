@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
+import { DeviceDetailsDrawer } from "@drawer/components/DeviceDetailsDrawer";
 
 mapboxgl.accessToken = (typeof __MAPBOX_TOKEN__ !== "undefined" ? __MAPBOX_TOKEN__ : (typeof import.meta !== "undefined" && import.meta.env?.VITE_MAPBOX_TOKEN)) || "";
 import {
@@ -2570,41 +2571,58 @@ const MAPBOX_STYLES = {
   mutednight:  "mapbox://styles/mapbox/dark-v11",
 };
 
+/* ── Device marker positions (seeded around NYC) ── */
+const DEVICE_MARKERS = [
+  { id: "DEV-001", lng: -73.9857, lat: 40.7484, color: "#4A9EFF" },
+  { id: "DEV-002", lng: -74.0060, lat: 40.7128, color: "#4A9EFF" },
+  { id: "DEV-003", lng: -73.9712, lat: 40.7614, color: "#22C55E" },
+  { id: "DEV-004", lng: -73.9442, lat: 40.7282, color: "#4A9EFF" },
+  { id: "DEV-005", lng: -73.9965, lat: 40.7580, color: "#22C55E" },
+  { id: "DEV-006", lng: -74.0134, lat: 40.7023, color: "#4A9EFF" },
+  { id: "DEV-007", lng: -73.9823, lat: 40.7389, color: "#22C55E" },
+  { id: "DEV-008", lng: -73.9551, lat: 40.7720, color: "#4A9EFF" },
+  { id: "DEV-009", lng: -74.0210, lat: 40.6892, color: "#22C55E" },
+  { id: "DEV-010", lng: -73.9634, lat: 40.7831, color: "#4A9EFF" },
+  { id: "DEV-011", lng: -73.9901, lat: 40.7305, color: "#22C55E" },
+  { id: "DEV-012", lng: -74.0071, lat: 40.7445, color: "#4A9EFF" },
+];
+
 function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
+  const markersRef = useRef([]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState(null);
   const styleUrl = MAPBOX_STYLES[baseMap] || MAPBOX_STYLES.darkmatter;
 
-  // Inject Mapbox CSS scoped to .mapbox-scope so it doesn't bleed into the rest of the app
+  // Inject Mapbox CSS scoped to .mapbox-scope
   useEffect(() => {
     if (document.getElementById("mapbox-scoped-css")) return;
-    const link = document.createElement("link");
-    link.id = "mapbox-scoped-css";
-    link.rel = "stylesheet";
-    link.href = "https://api.mapbox.com/mapbox-gl-js/v3.21.0/mapbox-gl.css";
-    document.head.appendChild(link);
-
-    // Once loaded, scope all rules under .mapbox-scope
-    link.onload = () => {
-      try {
-        const style = document.createElement("style");
-        style.id = "mapbox-scoped-override";
-        // Re-scope critical mapbox canvas/control styles without touching global button/input
-        style.textContent = `
-          .mapbox-scope .mapboxgl-canvas { display: block; }
-          .mapbox-scope .mapboxgl-map { overflow: hidden; position: relative; }
-          .mapbox-scope .mapboxgl-ctrl-bottom-right { position: absolute; bottom: 0; right: 0; }
-          .mapbox-scope .mapboxgl-ctrl-group { background: rgba(14,14,14,0.85); border-radius: 4px; overflow: hidden; }
-          .mapbox-scope .mapboxgl-ctrl-group button { width: 30px; height: 30px; background: transparent; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-          .mapbox-scope .mapboxgl-ctrl-attrib { font-size: 10px; background: rgba(0,0,0,0.5); color: #999; padding: 2px 5px; border-radius: 2px; }
-          .mapbox-scope .mapboxgl-ctrl-attrib a { color: #999; }
-        `;
-        document.head.appendChild(style);
-      } catch(e) {}
-    };
+    const style = document.createElement("style");
+    style.id = "mapbox-scoped-css";
+    style.textContent = `
+      .mapbox-scope .mapboxgl-canvas { display: block; }
+      .mapbox-scope .mapboxgl-map { overflow: hidden; position: relative; }
+      .arkem-marker {
+        width: 10px; height: 10px; border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.25);
+        cursor: pointer;
+        box-shadow: 0 0 0 0 rgba(255,255,255,0.15);
+        transition: transform 0.15s, box-shadow 0.15s;
+      }
+      .arkem-marker:hover {
+        transform: scale(1.5);
+        box-shadow: 0 0 0 4px rgba(255,255,255,0.1);
+      }
+      .arkem-marker.active {
+        transform: scale(1.6);
+        box-shadow: 0 0 0 5px rgba(255,255,255,0.15);
+      }
+    `;
+    document.head.appendChild(style);
   }, []);
 
-  // Init map
+  // Init map + add markers
   useEffect(() => {
     if (!containerRef.current) return;
     const map = new mapboxgl.Map({
@@ -2614,14 +2632,49 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled }) {
       zoom: 11,
       attributionControl: false,
     });
+
+    map.on("load", () => {
+      // Add markers for each device
+      DEVICE_MARKERS.forEach((device) => {
+        const el = document.createElement("div");
+        el.className = "arkem-marker";
+        el.style.backgroundColor = device.color;
+        el.dataset.deviceId = device.id;
+
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          // Deactivate all, activate clicked
+          markersRef.current.forEach((m) => m.el.classList.remove("active"));
+          el.classList.add("active");
+          setSelectedDevice(device);
+          setDrawerOpen(true);
+        });
+
+        const marker = new mapboxgl.Marker({ element: el })
+          .setLngLat([device.lng, device.lat])
+          .addTo(map);
+
+        markersRef.current.push({ marker, el, device });
+      });
+    });
+
     mapRef.current = map;
-    return () => { map.remove(); mapRef.current = null; };
+    return () => {
+      markersRef.current = [];
+      map.remove();
+      mapRef.current = null;
+    };
   }, []);
 
   // Swap style when baseMap changes
   useEffect(() => {
     if (mapRef.current) mapRef.current.setStyle(styleUrl);
   }, [styleUrl]);
+
+  const handleDrawerClose = () => {
+    setDrawerOpen(false);
+    markersRef.current.forEach((m) => m.el.classList.remove("active"));
+  };
 
   const btnBase = {
     width: 28, height: 28,
@@ -2642,6 +2695,7 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled }) {
   return (
     <div className="mapbox-scope" style={{ width: "100%", height: "100%", position: "relative" }}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+
       {/* Custom zoom controls */}
       <div style={{ position: "absolute", bottom: sp.md, right: sp.md, display: "flex", flexDirection: "column", gap: 2 }}>
         <button
@@ -2659,6 +2713,9 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled }) {
           aria-label="Zoom out"
         >−</button>
       </div>
+
+      {/* Device Details Drawer */}
+      <DeviceDetailsDrawer isOpen={drawerOpen} onClose={handleDrawerClose} />
     </div>
   );
 }
