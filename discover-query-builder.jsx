@@ -87,7 +87,7 @@ const t = {
   overlayDark: "#00000066",
   feedbackWarning: "#a88940",
   /* Glass tokens */
-  glassBg: "rgba(8, 8, 8, 0.65)",
+  glassBg: "rgba(8, 8, 8, 0.88)",
   glassBorder: "rgba(255, 255, 255, 0.06)",
 };
 

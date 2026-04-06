@@ -1,0 +1,11 @@
+/* Reset any global style pollution from third-party CSS (e.g. mapbox-gl.css) */
+button, input, select, textarea {
+  font-family: inherit;
+  color: inherit;
+  background: revert;
+  border: revert;
+  padding: revert;
+  margin: revert;
+  box-sizing: revert;
+  cursor: revert;
+}
