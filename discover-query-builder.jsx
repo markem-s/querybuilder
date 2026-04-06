@@ -692,7 +692,7 @@ export default function DiscoverQueryBuilder() {
           left: sp.sm,
           bottom: sp.sm,
           zIndex: 10,
-          width: 364,
+          width: 320,
           background: t.glassBg,
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
@@ -994,7 +994,7 @@ export default function DiscoverQueryBuilder() {
       <div style={{
         position: "absolute",
         top: sp.sm,
-        left: panelCollapsed ? (sp.sm + 44 + sp.xs) : (sp.sm + 364 + sp.xs),
+        left: panelCollapsed ? (sp.sm + 44 + sp.xs) : (sp.sm + 320 + sp.xs),
         right: sp.sm,
         zIndex: 10,
         transition: prefersReduced ? "none" : `left ${motion.slow} ${motion.easeOut}`,
