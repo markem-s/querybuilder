@@ -99,7 +99,7 @@ function LayerTypeIcon({ type, color, size = 10 }) {
     case "point":
       return (
         <svg width={size} height={size} viewBox="0 0 10 10" fill="none" style={s}>
-          <circle cx="5" cy="5" r="3.5" stroke={color} strokeWidth={sw} />
+          <circle cx="5" cy="5" r="3.5" fill={color} />
         </svg>
       );
     case "hexbin":
@@ -136,7 +136,7 @@ function LayerTypeIcon({ type, color, size = 10 }) {
     default:
       return (
         <svg width={size} height={size} viewBox="0 0 10 10" fill="none" style={s}>
-          <circle cx="5" cy="5" r="3.5" stroke={color} strokeWidth={sw} />
+          <circle cx="5" cy="5" r="3.5" fill={color} />
         </svg>
       );
   }
