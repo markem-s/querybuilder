@@ -2633,48 +2633,47 @@ function DevicePanel({ device, onClose }) {
         </div>
       </div>
 
-      {/* ── Body: icon rail + content ── */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      {/* ── Horizontal tab navbar ── */}
+      <div style={{
+        flexShrink: 0, display: "flex", alignItems: "stretch",
+        background: t.bgBase, borderBottom: `1px solid ${t.borderDark}`,
+        height: 36,
+      }}>
+        {DEVICE_TABS.map((tab) => {
+          const isActive = activeTab === tab.key;
+          const I = tab.icon;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              title={tab.label}
+              aria-label={tab.label}
+              aria-pressed={isActive}
+              style={{
+                flex: 1, height: "100%", padding: 0,
+                background: "transparent",
+                border: "none",
+                borderBottom: `2px solid ${isActive ? t.yellow500 : "transparent"}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", outline: "none",
+                color: isActive ? t.textPrimary : t.textSubtle,
+                transition: "border-color 0.12s, color 0.12s",
+              }}
+              onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.color = t.textSecondary; e.currentTarget.style.background = t.bgHover; } }}
+              onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.color = t.textSubtle; e.currentTarget.style.background = "transparent"; } }}
+              onMouseDown={(e) => (e.currentTarget.dataset.mousedown = "1")}
+              onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
+              onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
+            >
+              <I size={14} />
+            </button>
+          );
+        })}
+      </div>
 
-        {/* ─── Vertical icon rail — exact same spec as query builder rail ─── */}
-        <div style={{
-          width: 44, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center",
-          background: t.bgBase, borderRight: `1px solid ${t.borderDark}`, paddingTop: sp.xs, gap: 1,
-        }}>
-          {DEVICE_TABS.map((tab) => {
-            const isActive = activeTab === tab.key;
-            const I = tab.icon;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                title={tab.label}
-                aria-label={tab.label}
-                aria-pressed={isActive}
-                style={{
-                  width: 44, height: 44, padding: 0,
-                  background: isActive ? t.bgField : "transparent",
-                  border: "none",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: "pointer", outline: "none", position: "relative",
-                  transition: "background 0.12s, color 0.12s",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.querySelector("svg").style.color = isActive ? t.textPrimary : t.textSecondary; }}
-                onMouseLeave={(e) => { e.currentTarget.querySelector("svg").style.color = isActive ? t.textPrimary : t.textSubtle; }}
-                onMouseDown={(e) => (e.currentTarget.dataset.mousedown = "1")}
-                onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
-                onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
-              >
-                <I size={16} color={isActive ? t.textPrimary : t.textSubtle} />
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ─── Content area ─── */}
-        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <DeviceDetailsContent onClose={onClose} activeTab={activeTab} onTabChange={setActiveTab} />
-        </div>
+      {/* ── Content area ── */}
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <DeviceDetailsContent onClose={onClose} activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
     </div>
   );
