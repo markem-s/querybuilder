@@ -157,6 +157,26 @@ const type = {
 /* ── Focus ring style (a11y) ── */
 const focusRing = `0 0 0 2px ${t.borderSubtle}`;
 
+/* ── Shared add-button style ── */
+const addBtnStyle = {
+  width: "100%",
+  padding: sp.sm,
+  background: "transparent",
+  border: `1px dashed ${t.borderMuted}`,
+  borderRadius: sp.xs,
+  color: t.textSecondary,
+  fontSize: 11,
+  fontWeight: 400,
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: sp.xs,
+  outline: "none",
+};
+const addBtnHover = (e) => { e.currentTarget.style.borderColor = t.borderSubtle; e.currentTarget.style.color = t.textPrimary; };
+const addBtnLeave = (e) => { e.currentTarget.style.borderColor = t.borderMuted; e.currentTarget.style.color = t.textSecondary; };
+
 /* ── Motion tokens ── */
 const motion = {
   fast: "150ms",
@@ -892,24 +912,8 @@ export default function DiscoverQueryBuilder() {
                   {/* Add Group */}
                   <button
                     onClick={addSourceGroup}
-                    style={{
-                      width: "100%",
-                      marginTop: sp.xs,
-                      padding: sp.xs,
-                      background: "transparent",
-                      border: `1px dashed ${t.borderMuted}`,
-                      borderRadius: sp.xs,
-                      color: t.textSecondary,
-                      fontSize: 11,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: sp.xs,
-                      outline: "none",
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = t.borderSubtle; e.currentTarget.style.color = t.textPrimary; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = t.borderMuted; e.currentTarget.style.color = t.textSecondary; }}
+                    style={{ ...addBtnStyle, marginTop: sp.xs }}
+                    onMouseEnter={addBtnHover} onMouseLeave={addBtnLeave}
                     onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
                     onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                   >
@@ -954,26 +958,12 @@ export default function DiscoverQueryBuilder() {
                   ))}
                   <button
                     onClick={addGroup}
-                    style={{
-                      width: "100%",
-                      padding: sp.sm,
-                      marginTop: sp.sm,
-                      background: "transparent",
-                      border: `1px dashed ${t.borderMuted}`,
-                      borderRadius: sp.xs,
-                      color: t.textSecondary,
-                      ...type.secondary,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: sp.sm,
-                      outline: "none",
-                    }}
+                    style={{ ...addBtnStyle, marginTop: sp.sm }}
+                    onMouseEnter={addBtnHover} onMouseLeave={addBtnLeave}
                     onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
                     onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                   >
-                    <Plus size={12} /> Add Group
+                    <Plus size={11} /> Add Group
                   </button>
                 </div>
               )}
@@ -1378,28 +1368,12 @@ function SourceGroupSection({ group, filteredCounts, isFiltered, onToggleCollaps
           {/* Add Dataset to this group */}
           <button
             onClick={onAddDataset}
-            style={{
-              width: "100%",
-              marginTop: group.sources.length > 0 ? sp.xs : 0,
-              marginBottom: sp.xs,
-              padding: `${sp.xs}px ${sp.sm}px`,
-              background: "transparent",
-              border: `1px dashed ${t.borderDark}`,
-              borderRadius: sp.xs,
-              color: t.textSubtle,
-              fontSize: 10,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: sp.xs,
-              outline: "none",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = t.borderMuted; e.currentTarget.style.color = t.textSecondary; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = t.borderDark; e.currentTarget.style.color = t.textSubtle; }}
+            style={{ ...addBtnStyle, marginTop: group.sources.length > 0 ? sp.xs : 0, marginBottom: sp.xs }}
+            onMouseEnter={addBtnHover} onMouseLeave={addBtnLeave}
             onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
             onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
           >
-            <Plus size={10} /> Add Dataset
+            <Plus size={11} /> Add Dataset
           </button>
         </div>
       </Expandable>
@@ -1706,24 +1680,8 @@ function SourceRow({ source, filteredCount, isFiltered, onToggle, onUpdateLayer,
           {/* Add Layer button */}
           <button
             onClick={onAddSubLayer}
-            style={{
-              width: "100%",
-              marginTop: sp.sm,
-              padding: sp.sm,
-              background: "transparent",
-              border: `1px dashed ${t.borderMuted}`,
-              borderRadius: sp.xs,
-              color: t.textSecondary,
-              ...type.secondary,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: sp.xs,
-              outline: "none",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = t.yellow500; e.currentTarget.style.color = t.yellow500; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = t.borderMuted; e.currentTarget.style.color = t.textSecondary; }}
+            style={{ ...addBtnStyle, marginTop: sp.sm }}
+            onMouseEnter={addBtnHover} onMouseLeave={addBtnLeave}
             onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
             onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
           >
