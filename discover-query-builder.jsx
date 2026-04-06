@@ -2679,15 +2679,57 @@ const DEVICE_TABS = [
   { key: "timeline",     icon: Clock,             label: "Timeline"       },
 ];
 
+/* ── PanelTabBar — reusable icon tab strip, same token/motion spec as QueryBar ── */
+function PanelTabBar({ tabs, activeKey, onChange }) {
+  return (
+    <div role="tablist" style={{
+      flexShrink: 0, display: "flex", alignItems: "stretch",
+      background: t.bgBase, borderBottom: `1px solid ${t.borderDark}`,
+      height: 36,
+    }}>
+      {tabs.map(({ key, icon: Icon, label }) => {
+        const isActive = activeKey === key;
+        return (
+          <button
+            key={key}
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(key)}
+            title={label}
+            aria-label={label}
+            style={{
+              flex: 1, height: "100%", padding: 0,
+              background: "transparent", border: "none",
+              borderBottom: `2px solid ${isActive ? t.yellow500 : "transparent"}`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", outline: "none",
+              color: isActive ? t.textPrimary : t.textSubtle,
+              transition: `border-color ${motion.fast}, color ${motion.fast}, background ${motion.fast}`,
+            }}
+            onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.color = t.textSecondary; e.currentTarget.style.background = t.bgHover; } }}
+            onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.color = t.textSubtle; e.currentTarget.style.background = "transparent"; } }}
+            onMouseDown={(e) => (e.currentTarget.dataset.mousedown = "1")}
+            onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
+            onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
+          >
+            <Icon size={14} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function DevicePanel({ device, onClose }) {
   const [activeTab, setActiveTab] = useState("device");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: t.glassBg, overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
 
-      {/* ── Header — same structure as QueryBar ── */}
+      {/* ── Bar — identical structure to QueryBar ── */}
       <div style={{ flexShrink: 0, background: t.bgBase, borderBottom: `1px solid ${t.borderDark}`, minHeight: 44, boxSizing: "border-box", display: "flex", alignItems: "stretch" }}>
-        {/* Left 44px slot — mirrors collapse button in QueryBar */}
+
+        {/* Left 44px slot — exact match of QueryBar's collapse button spec */}
         <button
           onClick={onClose}
           title="Close panel"
@@ -2702,7 +2744,7 @@ function DevicePanel({ device, onClose }) {
           <PanelLeftClose size={16} color={t.textSubtle} />
         </button>
 
-        {/* Title + action icons */}
+        {/* Title + close action — same flex row as QueryBar's name+icons slot */}
         <div style={{ display: "flex", alignItems: "center", gap: sp.sm, flex: 1, padding: `0 ${sp.md}px` }}>
           <span style={{ flex: 1, minWidth: 0, ...type.subheading, color: t.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: `${sp.xs}px 2px` }}>
             {device?.id ?? "Device Details"}
@@ -2711,45 +2753,10 @@ function DevicePanel({ device, onClose }) {
         </div>
       </div>
 
-      {/* ── Horizontal tab navbar ── */}
-      <div style={{
-        flexShrink: 0, display: "flex", alignItems: "stretch",
-        background: t.bgBase, borderBottom: `1px solid ${t.borderDark}`,
-        height: 36,
-      }}>
-        {DEVICE_TABS.map((tab) => {
-          const isActive = activeTab === tab.key;
-          const I = tab.icon;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              title={tab.label}
-              aria-label={tab.label}
-              aria-pressed={isActive}
-              style={{
-                flex: 1, height: "100%", padding: 0,
-                background: "transparent",
-                border: "none",
-                borderBottom: `2px solid ${isActive ? t.yellow500 : "transparent"}`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer", outline: "none",
-                color: isActive ? t.textPrimary : t.textSubtle,
-                transition: "border-color 0.12s, color 0.12s",
-              }}
-              onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.color = t.textSecondary; e.currentTarget.style.background = t.bgHover; } }}
-              onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.color = t.textSubtle; e.currentTarget.style.background = "transparent"; } }}
-              onMouseDown={(e) => (e.currentTarget.dataset.mousedown = "1")}
-              onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
-              onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
-            >
-              <I size={14} />
-            </button>
-          );
-        })}
-      </div>
+      {/* ── Tab strip — PanelTabBar primitive ── */}
+      <PanelTabBar tabs={DEVICE_TABS} activeKey={activeTab} onChange={setActiveTab} />
 
-      {/* ── Content area ── */}
+      {/* ── Content ── */}
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         <DeviceDetailsContent onClose={onClose} activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
