@@ -1046,7 +1046,7 @@ export default function DiscoverQueryBuilder() {
         <MapPlaceholder sources={sources} filteredCounts={filteredCounts} baseMap={baseMap} heatmapEnabled={heatmapEnabled} drawerOpen={drawerOpen} onDeviceClick={(device) => { setSelectedDevice(device); setDrawerOpen(true); }} onMapReady={(map) => { sharedMapRef.current = map; }} />
       </div>
 
-      {/* ═══ DEVICE DETAILS PANEL ═══ — sits at right edge, toolbar slides away to reveal it */}
+      {/* ═══ DEVICE DETAILS PANEL ═══ — slides in to the left of the toolbar */}
       <div
         role="region"
         aria-label="Device Details"
@@ -1054,7 +1054,7 @@ export default function DiscoverQueryBuilder() {
         style={{
           position: "absolute",
           top: sp.sm,
-          right: sp.sm,
+          right: 44 + sp.sm + sp.sm, /* toolbar(44) + toolbar inset + gap */
           bottom: sp.sm,
           zIndex: 10,
           width: 320,
@@ -1066,7 +1066,7 @@ export default function DiscoverQueryBuilder() {
           flexDirection: "column",
           overflow: "hidden",
           opacity: drawerOpen ? 1 : 0,
-          transform: drawerOpen ? "translateX(0)" : "translateX(8px)",
+          transform: drawerOpen ? "translateX(0)" : "translateX(16px)",
           pointerEvents: drawerOpen ? "auto" : "none",
           transition: prefersReduced ? "none" : `opacity ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}, transform ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}`,
         }}
@@ -1074,7 +1074,7 @@ export default function DiscoverQueryBuilder() {
         <DevicePanel device={selectedDevice} onClose={() => { setDrawerOpen(false); setSelectedDevice(null); }} />
       </div>
 
-      {/* ═══ RIGHT RAILING TOOLBAR ═══ — slides right when drawer opens */}
+      {/* ═══ RIGHT RAILING TOOLBAR ═══ — always visible at right edge */}
       <div style={{
         position: "absolute",
         top: sp.sm,
@@ -1082,8 +1082,6 @@ export default function DiscoverQueryBuilder() {
         bottom: sp.sm,
         zIndex: 11,
         width: 44,
-        transform: drawerOpen ? `translateX(${320 + sp.sm}px)` : "translateX(0)",
-        transition: prefersReduced ? "none" : `transform ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}`,
       }}>
         <MapToolbar mapRef={sharedMapRef} />
       </div>
