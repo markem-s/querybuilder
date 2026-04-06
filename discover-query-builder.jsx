@@ -57,6 +57,10 @@ import {
   Cuboid,
   ScanLine,
   Ruler,
+  CircleIcon,
+  Spline,
+  Flame,
+  ImageIcon,
   Pentagon,
   MonitorSmartphone,
   Home,
@@ -90,6 +94,42 @@ const t = {
   glassBg: "#0d0d0d",
   glassBorder: "#1e1e1e",
 };
+
+/* ── Layer type icon map ── */
+function HexbinIcon({ size = 14, color = "currentColor" }) {
+  const r = size / 2;
+  const h = r * 0.866;
+  const pts = [
+    [r, 0], [r + h * 0.6, r * 0.5], [r + h * 0.6, r * 1.5],
+    [r, r * 2], [r - h * 0.6, r * 1.5], [r - h * 0.6, r * 0.5],
+  ].map(([x, y]) => `${x},${y}`).join(" ");
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none" style={{ display: "block", flexShrink: 0 }}>
+      <polygon points={pts} stroke={color} strokeWidth={1.5} fill="none" />
+    </svg>
+  );
+}
+
+function ArcIcon({ size = 14, color = "currentColor" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none" style={{ display: "block", flexShrink: 0 }}>
+      <path d="M2 12 Q7 1 12 12" stroke={color} strokeWidth={1.5} fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LayerTypeIcon({ type, color, size = 13 }) {
+  const props = { size, color };
+  switch (type) {
+    case "point":   return <CircleIcon {...props} />;
+    case "hexbin":  return <HexbinIcon size={size} color={color} />;
+    case "arc":     return <ArcIcon size={size} color={color} />;
+    case "icon":    return <ImageIcon {...props} />;
+    case "heatmap": return <Flame {...props} />;
+    case "line":    return <Spline {...props} />;
+    default:        return <CircleIcon {...props} />;
+  }
+}
 
 /* ── Normalized spacing scale (4pt base) ── */
 const sp = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
@@ -1432,16 +1472,15 @@ function SourceRow({ source, filteredCount, isFiltered, onToggle, onUpdateLayer,
       }}>
         <GripVertical size={12} color={t.textSubtle} style={{ cursor: "grab", flexShrink: 0, marginTop: 3 }} aria-hidden="true" />
 
-        {/* Color dot — aligned to title */}
-        <span style={{ width: 8, height: 8, borderRadius: 2, background: source.color, flexShrink: 0, marginTop: 4 }} aria-hidden="true" />
+        {/* Layer type icon — carries the source color */}
+        <span style={{ flexShrink: 0, marginTop: 2, display: "flex", alignItems: "center" }} aria-hidden="true">
+          <LayerTypeIcon type={source.layerType} color={source.color} size={11} />
+        </span>
 
         {/* Name + counter stacked */}
         <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setExpanded(!expanded)}>
           <div style={{ display: "flex", alignItems: "center", gap: sp.xs }}>
             <span style={{ ...type.body, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 1 }}>{source.name}</span>
-            <span style={{ fontSize: 9, fontWeight: 500, color: t.textSubtle, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0, lineHeight: "14px" }}>
-              {source.layerType}
-            </span>
             {(source.layers || []).length > 0 && (
               <span style={{
                 display: "inline-flex", alignItems: "center", gap: 2,
