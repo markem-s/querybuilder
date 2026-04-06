@@ -87,8 +87,8 @@ const t = {
   overlayDark: "#00000066",
   feedbackWarning: "#a88940",
   /* Glass tokens */
-  glassBg: "rgba(8, 8, 8, 0.88)",
-  glassBorder: "rgba(255, 255, 255, 0.06)",
+  glassBg: "#0d0d0d",
+  glassBorder: "#1e1e1e",
 };
 
 /* ── Normalized spacing scale (4pt base) ── */
@@ -663,8 +663,6 @@ export default function DiscoverQueryBuilder() {
           borderRadius: sp.xs,
           border: `1px solid ${t.glassBorder}`,
           background: t.glassBg,
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -697,8 +695,6 @@ export default function DiscoverQueryBuilder() {
           zIndex: 10,
           width: 320,
           background: t.glassBg,
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
           borderRadius: sp.xs,
           border: `1px solid ${t.glassBorder}`,
           display: "flex",
@@ -2504,8 +2500,6 @@ function MapToolbar() {
       width: "100%", height: 44, display: "flex", alignItems: "center", gap: sp.md,
       padding: `0 ${sp.md}px`,
       background: t.glassBg,
-      backdropFilter: "blur(24px)",
-      WebkitBackdropFilter: "blur(24px)",
       borderRadius: sp.xs,
       border: `1px solid ${t.glassBorder}`,
       boxSizing: "border-box",
