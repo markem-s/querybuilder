@@ -2603,74 +2603,69 @@ const DEVICE_TABS = [
 
 function DevicePanel({ device, onClose }) {
   const [activeTab, setActiveTab] = useState("device");
-  const prefersReduced = useReducedMotion();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: t.glassBg, overflow: "hidden" }}>
-      {/* ── Header bar — matches QueryBar height/style ── */}
-      <div style={{
-        height: 44,
-        flexShrink: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingLeft: sp.md,
-        paddingRight: sp.sm,
-        borderBottom: `1px solid ${t.borderDark}`,
-        background: t.bgBase,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: sp.sm, overflow: "hidden" }}>
-          <MonitorSmartphone size={14} color={t.yellow500} style={{ flexShrink: 0 }} />
-          <span style={{ ...type.subheading, color: t.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {device?.id ?? "Device Details"}
-          </span>
-        </div>
+
+      {/* ── Header — same structure as QueryBar ── */}
+      <div style={{ flexShrink: 0, background: t.bgBase, borderBottom: `1px solid ${t.borderDark}`, minHeight: 44, boxSizing: "border-box", display: "flex", alignItems: "stretch" }}>
+        {/* Left 44px slot — mirrors collapse button in QueryBar */}
         <button
           onClick={onClose}
-          title="Close"
-          style={{
-            width: 28, height: 28, flexShrink: 0,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "transparent", border: "none", borderRadius: sp.xs,
-            color: t.textSubtle, cursor: "pointer", outline: "none",
-            transition: `color ${motion.fast}`,
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = t.textPrimary; e.currentTarget.style.background = t.bgHover; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = t.textSubtle; e.currentTarget.style.background = "transparent"; }}
+          title="Close panel"
+          aria-label="Close panel"
+          style={{ width: 44, flexShrink: 0, background: "none", border: "none", borderRight: `1px solid ${t.borderDark}`, cursor: "pointer", padding: 0, outline: "none", display: "flex", alignItems: "center", justifyContent: "center" }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = t.bgHover)}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+          onMouseDown={(e) => (e.currentTarget.dataset.mousedown = "1")}
+          onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
+          onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
         >
-          <X size={14} />
+          <PanelLeftClose size={16} color={t.textSubtle} />
         </button>
+
+        {/* Title + action icons */}
+        <div style={{ display: "flex", alignItems: "center", gap: sp.sm, flex: 1, padding: `0 ${sp.md}px` }}>
+          <span style={{ flex: 1, minWidth: 0, ...type.subheading, color: t.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: `${sp.xs}px 2px` }}>
+            {device?.id ?? "Device Details"}
+          </span>
+          <QBarIcon icon={<X size={14} />} title="Close" onClick={onClose} />
+        </div>
       </div>
 
       {/* ── Body: icon rail + content ── */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
 
-        {/* ─── Vertical icon rail ─── */}
+        {/* ─── Vertical icon rail — exact same spec as query builder rail ─── */}
         <div style={{
           width: 44, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center",
           background: t.bgBase, borderRight: `1px solid ${t.borderDark}`, paddingTop: sp.xs, gap: 1,
         }}>
           {DEVICE_TABS.map((tab) => {
             const isActive = activeTab === tab.key;
+            const I = tab.icon;
             return (
               <button
                 key={tab.key}
-                title={tab.label}
                 onClick={() => setActiveTab(tab.key)}
+                title={tab.label}
+                aria-label={tab.label}
+                aria-pressed={isActive}
                 style={{
-                  width: 36, height: 36,
+                  width: 44, height: 44, padding: 0,
+                  background: isActive ? t.bgField : "transparent",
+                  border: "none",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  background: isActive ? t.bgRaised : "transparent",
-                  border: "none", borderRadius: sp.xs,
-                  color: isActive ? t.yellow500 : t.textSubtle,
-                  cursor: "pointer", outline: "none", flexShrink: 0,
-                  transition: `background ${motion.fast}, color ${motion.fast}`,
-                  position: "relative",
+                  cursor: "pointer", outline: "none", position: "relative",
+                  transition: "background 0.12s, color 0.12s",
                 }}
-                onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = t.bgHover; e.currentTarget.style.color = t.textSecondary; } }}
-                onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = t.textSubtle; } }}
+                onMouseEnter={(e) => { e.currentTarget.querySelector("svg").style.color = isActive ? t.textPrimary : t.textSecondary; }}
+                onMouseLeave={(e) => { e.currentTarget.querySelector("svg").style.color = isActive ? t.textPrimary : t.textSubtle; }}
+                onMouseDown={(e) => (e.currentTarget.dataset.mousedown = "1")}
+                onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
+                onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
               >
-                <tab.icon size={15} />
+                <I size={16} color={isActive ? t.textPrimary : t.textSubtle} />
               </button>
             );
           })}
