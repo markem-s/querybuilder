@@ -2498,7 +2498,7 @@ function ToolbarBtn({ icon: Icon, label, size }) {
 function MapToolbar() {
   return (
     <div style={{
-      height: 44, display: "flex", alignItems: "center", gap: sp.md,
+      width: "100%", height: 44, display: "flex", alignItems: "center", gap: sp.md,
       padding: `0 ${sp.md}px`,
       background: t.glassBg,
       backdropFilter: "blur(24px)",
