@@ -1046,25 +1046,27 @@ export default function DiscoverQueryBuilder() {
         <MapPlaceholder sources={sources} filteredCounts={filteredCounts} baseMap={baseMap} heatmapEnabled={heatmapEnabled} drawerOpen={drawerOpen} onDeviceClick={(device) => { setSelectedDevice(device); setDrawerOpen(true); }} onMapReady={(map) => { sharedMapRef.current = map; }} />
       </div>
 
-      {/* ═══ DEVICE DETAILS PANEL ═══ — slides in flush against the right railing */}
+      {/* ═══ DEVICE DETAILS PANEL ═══ — floats, slides in beside the railing */}
       <div
         role="region"
         aria-label="Device Details"
         aria-hidden={!drawerOpen}
         style={{
           position: "absolute",
-          top: 0,
-          right: 44, /* railing width */
-          bottom: 0,
+          top: sp.sm,
+          right: 44 + sp.sm + sp.sm, /* toolbar(44) + toolbar right inset + gap */
+          bottom: sp.sm,
           zIndex: 10,
           width: 320,
           background: t.glassBg,
-          borderLeft: `1px solid ${t.glassBorder}`,
+          border: `1px solid ${t.glassBorder}`,
+          borderRadius: sp.xs,
+          boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
           opacity: drawerOpen ? 1 : 0,
-          transform: drawerOpen ? "translateX(0)" : "translateX(320px)",
+          transform: drawerOpen ? "translateX(0)" : "translateX(16px)",
           pointerEvents: drawerOpen ? "auto" : "none",
           transition: prefersReduced ? "none" : `opacity ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}, transform ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}`,
         }}
@@ -1075,9 +1077,9 @@ export default function DiscoverQueryBuilder() {
       {/* ═══ RIGHT RAILING TOOLBAR ═══ */}
       <div style={{
         position: "absolute",
-        top: 0,
-        right: 0,
-        bottom: 0,
+        top: sp.sm,
+        right: sp.sm,
+        bottom: sp.sm,
         zIndex: 11,
         width: 44,
       }}>
@@ -2553,7 +2555,7 @@ function MapToolbar({ mapRef }) {
   };
 
   return (
-    <div style={{ width: 44, height: "100%", display: "flex", flexDirection: "column", alignItems: "center", background: t.bgBase, borderLeft: `1px solid ${t.borderDark}`, boxSizing: "border-box", position: "relative" }}>
+    <div style={{ width: 44, height: "100%", display: "flex", flexDirection: "column", alignItems: "center", background: t.glassBg, border: `1px solid ${t.glassBorder}`, borderRadius: sp.xs, boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)", boxSizing: "border-box", position: "relative", overflow: "hidden" }}>
 
       {/* ── Top group ── */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: sp.xs }}>
@@ -2626,8 +2628,8 @@ function MapToolbar({ mapRef }) {
       {/* ── Search input — floating panel, slides left out of the railing ── */}
       <div style={{
         position: "absolute",
-        right: 44 + sp.sm,       /* sp.sm gap from railing edge */
-        bottom: sp.sm,            /* pinned to bottom, matching panel inset */
+        right: 44 + sp.sm + sp.sm, /* toolbar(44) + toolbar right inset + gap */
+        bottom: sp.sm,             /* pinned to bottom, matching panel inset */
         width: searchOpen ? 240 : 220,
         opacity: searchOpen ? 1 : 0,
         transform: searchOpen ? "translateX(0)" : "translateX(12px)",
