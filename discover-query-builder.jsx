@@ -1046,7 +1046,7 @@ export default function DiscoverQueryBuilder() {
         <MapPlaceholder sources={sources} filteredCounts={filteredCounts} baseMap={baseMap} heatmapEnabled={heatmapEnabled} drawerOpen={drawerOpen} onDeviceClick={(device) => { setSelectedDevice(device); setDrawerOpen(true); }} onMapReady={(map) => { sharedMapRef.current = map; }} />
       </div>
 
-      {/* ═══ DEVICE DETAILS PANEL ═══ — floats, slides in beside the railing */}
+      {/* ═══ DEVICE DETAILS PANEL ═══ — sits at right edge, toolbar slides away to reveal it */}
       <div
         role="region"
         aria-label="Device Details"
@@ -1054,7 +1054,7 @@ export default function DiscoverQueryBuilder() {
         style={{
           position: "absolute",
           top: sp.sm,
-          right: 44 + sp.sm + sp.sm, /* toolbar(44) + toolbar right inset + gap */
+          right: sp.sm,
           bottom: sp.sm,
           zIndex: 10,
           width: 320,
@@ -1066,7 +1066,7 @@ export default function DiscoverQueryBuilder() {
           flexDirection: "column",
           overflow: "hidden",
           opacity: drawerOpen ? 1 : 0,
-          transform: drawerOpen ? "translateX(0)" : "translateX(16px)",
+          transform: drawerOpen ? "translateX(0)" : "translateX(8px)",
           pointerEvents: drawerOpen ? "auto" : "none",
           transition: prefersReduced ? "none" : `opacity ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}, transform ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}`,
         }}
@@ -1074,7 +1074,7 @@ export default function DiscoverQueryBuilder() {
         <DevicePanel device={selectedDevice} onClose={() => { setDrawerOpen(false); setSelectedDevice(null); }} />
       </div>
 
-      {/* ═══ RIGHT RAILING TOOLBAR ═══ */}
+      {/* ═══ RIGHT RAILING TOOLBAR ═══ — slides right when drawer opens */}
       <div style={{
         position: "absolute",
         top: sp.sm,
@@ -1082,6 +1082,8 @@ export default function DiscoverQueryBuilder() {
         bottom: sp.sm,
         zIndex: 11,
         width: 44,
+        transform: drawerOpen ? `translateX(${320 + sp.sm}px)` : "translateX(0)",
+        transition: prefersReduced ? "none" : `transform ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}`,
       }}>
         <MapToolbar mapRef={sharedMapRef} />
       </div>
@@ -2628,8 +2630,8 @@ function MapToolbar({ mapRef }) {
       {/* ── Search input — floating panel, slides left out of the railing ── */}
       <div style={{
         position: "absolute",
-        right: 44 + sp.sm + sp.sm, /* toolbar(44) + toolbar right inset + gap */
-        bottom: sp.sm,             /* pinned to bottom, matching panel inset */
+        right: 44,   /* exits left from the toolbar edge */
+        bottom: sp.sm,
         width: searchOpen ? 240 : 220,
         opacity: searchOpen ? 1 : 0,
         transform: searchOpen ? "translateX(0)" : "translateX(12px)",
