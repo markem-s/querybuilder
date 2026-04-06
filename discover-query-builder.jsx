@@ -1046,44 +1046,50 @@ export default function DiscoverQueryBuilder() {
         <MapPlaceholder sources={sources} filteredCounts={filteredCounts} baseMap={baseMap} heatmapEnabled={heatmapEnabled} drawerOpen={drawerOpen} onDeviceClick={(device) => { setSelectedDevice(device); setDrawerOpen(true); }} onMapReady={(map) => { sharedMapRef.current = map; }} />
       </div>
 
-      {/* ═══ DEVICE DETAILS PANEL ═══ — slides in to the left of the toolbar */}
-      <div
-        role="region"
-        aria-label="Device Details"
-        aria-hidden={!drawerOpen}
-        style={{
-          position: "absolute",
-          top: sp.sm,
-          right: 44 + sp.sm + sp.sm, /* toolbar(44) + toolbar inset + gap */
-          bottom: sp.sm,
-          zIndex: 10,
-          width: 320,
-          background: t.glassBg,
-          border: `1px solid ${t.glassBorder}`,
-          borderRadius: sp.xs,
-          boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          opacity: drawerOpen ? 1 : 0,
-          transform: drawerOpen ? "translateX(0)" : "translateX(16px)",
-          pointerEvents: drawerOpen ? "auto" : "none",
-          transition: prefersReduced ? "none" : `opacity ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}, transform ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}`,
-        }}
-      >
-        <DevicePanel device={selectedDevice} onClose={() => { setDrawerOpen(false); setSelectedDevice(null); }} />
-      </div>
-
-      {/* ═══ RIGHT RAILING TOOLBAR ═══ — always visible at right edge */}
+      {/* ═══ TOOLBAR + DRAWER — shared floating container ═══
+           The container is always pinned right: sp.sm.
+           Drawer slides in from the right, flush against the toolbar's left edge.
+           No gap between them — they share one border/shadow surface. */}
       <div style={{
         position: "absolute",
         top: sp.sm,
         right: sp.sm,
         bottom: sp.sm,
         zIndex: 11,
-        width: 44,
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "stretch",
+        background: t.glassBg,
+        border: `1px solid ${t.glassBorder}`,
+        borderRadius: sp.xs,
+        boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)",
+        overflow: "hidden",
       }}>
-        <MapToolbar mapRef={sharedMapRef} />
+
+        {/* Device drawer — width animates 0 → 320, slides in from the right */}
+        <div
+          role="region"
+          aria-label="Device Details"
+          aria-hidden={!drawerOpen}
+          style={{
+            width: drawerOpen ? 320 : 0,
+            overflow: "hidden",
+            flexShrink: 0,
+            borderRight: drawerOpen ? `1px solid ${t.glassBorder}` : "none",
+            transition: prefersReduced ? "none" : `width ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}`,
+          }}
+        >
+          {/* Inner wrapper keeps the panel at its full 320px so content doesn't squish */}
+          <div style={{ width: 320, height: "100%", display: "flex", flexDirection: "column" }}>
+            <DevicePanel device={selectedDevice} onClose={() => { setDrawerOpen(false); setSelectedDevice(null); }} />
+          </div>
+        </div>
+
+        {/* Toolbar — always visible, flush right */}
+        <div style={{ width: 44, flexShrink: 0 }}>
+          <MapToolbar mapRef={sharedMapRef} />
+        </div>
+
       </div>
 
       {/* ═══ SAVE MODAL ═══ */}
@@ -2555,7 +2561,7 @@ function MapToolbar({ mapRef }) {
   };
 
   return (
-    <div style={{ width: 44, height: "100%", display: "flex", flexDirection: "column", alignItems: "center", background: t.glassBg, border: `1px solid ${t.glassBorder}`, borderRadius: sp.xs, boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)", boxSizing: "border-box", position: "relative", overflow: "hidden" }}>
+    <div style={{ width: 44, height: "100%", display: "flex", flexDirection: "column", alignItems: "center", background: "transparent", boxSizing: "border-box", position: "relative", overflow: "hidden" }}>
 
       {/* ── Top group ── */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: sp.xs }}>
