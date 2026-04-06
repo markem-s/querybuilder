@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-mapboxgl.accessToken = import.meta.env?.VITE_MAPBOX_TOKEN ?? "";
+mapboxgl.accessToken = (typeof __MAPBOX_TOKEN__ !== "undefined" ? __MAPBOX_TOKEN__ : (typeof import.meta !== "undefined" && import.meta.env?.VITE_MAPBOX_TOKEN)) || "";
 import {
   ChevronDown,
   ChevronRight,
