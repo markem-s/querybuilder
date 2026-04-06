@@ -1,23 +1,17 @@
 import Default from "@drawer-imports/Default";
 
+type TabKey = 'device' | 'report' | 'applications' | 'network' | 'timeline' | 'devices';
+
 interface DeviceDetailsContentProps {
   onClose: () => void;
+  activeTab?: TabKey;
+  onTabChange?: (tab: TabKey) => void;
 }
 
-export function DeviceDetailsContent({ onClose }: DeviceDetailsContentProps) {
-  // Add click handler to the close button
-  const handleClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    // Check if clicked element is within the close button
-    const closeButton = target.closest('[data-name="Button - Close drawer"]');
-    if (closeButton) {
-      onClose();
-    }
-  };
-
+export function DeviceDetailsContent({ onClose, activeTab, onTabChange }: DeviceDetailsContentProps) {
   return (
-    <div onClick={handleClick} className="h-full w-full">
-      <Default />
+    <div className="h-full w-full overflow-hidden">
+      <Default onClose={onClose} activeTab={activeTab} onTabChange={onTabChange} />
     </div>
   );
 }

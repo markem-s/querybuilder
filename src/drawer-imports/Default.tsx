@@ -3513,12 +3513,18 @@ function IPUpdateFooter() {
   );
 }
 
+type TabKey = 'device' | 'report' | 'applications' | 'network' | 'timeline' | 'devices';
+
 interface DefaultProps {
   onClose?: () => void;
+  activeTab?: TabKey;
+  onTabChange?: (tab: TabKey) => void;
 }
 
-export default function Default({ onClose }: DefaultProps = {}) {
-  const [activeTab, setActiveTab] = useState<'device' | 'report' | 'applications' | 'network' | 'timeline' | 'devices'>('device');
+export default function Default({ onClose, activeTab: externalTab, onTabChange: externalOnTabChange }: DefaultProps = {}) {
+  const [internalTab, setInternalTab] = useState<TabKey>('device');
+  const activeTab = externalTab ?? internalTab;
+  const setActiveTab = (tab: TabKey) => { setInternalTab(tab); externalOnTabChange?.(tab); };
   const [currentDeviceId, setCurrentDeviceId] = useState('837365');
   const [isFlagModalOpen, setIsFlagModalOpen] = useState(false);
   const [isWhoisLoading, setIsWhoisLoading] = useState(false);
@@ -3603,10 +3609,10 @@ export default function Default({ onClose }: DefaultProps = {}) {
   };
 
   return (
-    <div className="bg-[#080808] relative w-[320px] h-full flex flex-col" data-name="Default">
-      {/* Sticky Tab Bar with Buttons - Hide when on devices view */}
-      {activeTab !== 'devices' && (
-        <div className="sticky top-0 z-20 bg-[#080808]">
+    <div className="bg-[#0d0d0d] relative w-full h-full flex flex-col" data-name="Default">
+      {/* Sticky Tab Bar with Buttons - Hide when externally controlled or on devices view */}
+      {!externalTab && activeTab !== 'devices' && (
+        <div className="sticky top-0 z-20 bg-[#0d0d0d]">
           <BackgroundHorizontalBorder1
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -3652,7 +3658,7 @@ export default function Default({ onClose }: DefaultProps = {}) {
         onAccept={handleAcceptWhois}
       />
 
-      <div aria-hidden="true" className="absolute border-[#2b2b2b] border-l border-solid inset-0 pointer-events-none" />
+      <div aria-hidden="true" className="absolute border-[#1e1e1e] border-l border-solid inset-0 pointer-events-none" />
     </div>
   );
 }

@@ -63,6 +63,9 @@ import {
   Home,
   Settings,
   Box,
+  ChevronLeft,
+  ShieldAlert,
+  AppWindow,
 } from "lucide-react";
 
 /* ── Arkem Design Tokens ──────────────────────────────────────── */
@@ -1076,7 +1079,7 @@ export default function DiscoverQueryBuilder() {
           transition: prefersReduced ? "none" : `opacity ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}, transform ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}`,
         }}
       >
-        <DeviceDetailsContent onClose={() => { setDrawerOpen(false); setSelectedDevice(null); }} />
+        <DevicePanel device={selectedDevice} onClose={() => { setDrawerOpen(false); setSelectedDevice(null); }} />
       </div>
 
       {/* ═══ SAVE MODAL ═══ */}
@@ -2582,6 +2585,101 @@ function MapToolbar() {
         <ToolbarDivider />
         <ToolbarBtn icon={Home} label="Home" />
         <ToolbarBtn icon={Settings} label="Settings" />
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DEVICE PANEL — mirrors query builder panel chrome
+   ══════════════════════════════════════════════════════════════ */
+const DEVICE_TABS = [
+  { key: "device",       icon: MonitorSmartphone, label: "Device Details" },
+  { key: "report",       icon: ShieldAlert,       label: "Threat Report"  },
+  { key: "applications", icon: AppWindow,         label: "Applications"   },
+  { key: "network",      icon: Wifi,              label: "Network"        },
+  { key: "timeline",     icon: Clock,             label: "Timeline"       },
+];
+
+function DevicePanel({ device, onClose }) {
+  const [activeTab, setActiveTab] = useState("device");
+  const prefersReduced = useReducedMotion();
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: t.glassBg, overflow: "hidden" }}>
+      {/* ── Header bar — matches QueryBar height/style ── */}
+      <div style={{
+        height: 44,
+        flexShrink: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingLeft: sp.md,
+        paddingRight: sp.sm,
+        borderBottom: `1px solid ${t.borderDark}`,
+        background: t.bgBase,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: sp.sm, overflow: "hidden" }}>
+          <MonitorSmartphone size={14} color={t.yellow500} style={{ flexShrink: 0 }} />
+          <span style={{ ...type.subheading, color: t.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {device?.id ?? "Device Details"}
+          </span>
+        </div>
+        <button
+          onClick={onClose}
+          title="Close"
+          style={{
+            width: 28, height: 28, flexShrink: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "transparent", border: "none", borderRadius: sp.xs,
+            color: t.textSubtle, cursor: "pointer", outline: "none",
+            transition: `color ${motion.fast}`,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = t.textPrimary; e.currentTarget.style.background = t.bgHover; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = t.textSubtle; e.currentTarget.style.background = "transparent"; }}
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      {/* ── Body: icon rail + content ── */}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+
+        {/* ─── Vertical icon rail ─── */}
+        <div style={{
+          width: 44, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center",
+          background: t.bgBase, borderRight: `1px solid ${t.borderDark}`, paddingTop: sp.xs, gap: 1,
+        }}>
+          {DEVICE_TABS.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                title={tab.label}
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  width: 36, height: 36,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: isActive ? t.bgRaised : "transparent",
+                  border: "none", borderRadius: sp.xs,
+                  color: isActive ? t.yellow500 : t.textSubtle,
+                  cursor: "pointer", outline: "none", flexShrink: 0,
+                  transition: `background ${motion.fast}, color ${motion.fast}`,
+                  position: "relative",
+                }}
+                onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = t.bgHover; e.currentTarget.style.color = t.textSecondary; } }}
+                onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = t.textSubtle; } }}
+              >
+                <tab.icon size={15} />
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ─── Content area ─── */}
+        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <DeviceDetailsContent onClose={onClose} activeTab={activeTab} onTabChange={setActiveTab} />
+        </div>
       </div>
     </div>
   );
