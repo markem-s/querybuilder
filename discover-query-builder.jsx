@@ -2614,8 +2614,6 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled }) {
       zoom: 11,
       attributionControl: false,
     });
-    map.addControl(new mapboxgl.AttributionControl({ compact: true }));
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; };
   }, []);
@@ -2625,9 +2623,42 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled }) {
     if (mapRef.current) mapRef.current.setStyle(styleUrl);
   }, [styleUrl]);
 
+  const btnBase = {
+    width: 28, height: 28,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    background: t.bgRaised,
+    border: `1px solid ${t.borderDark}`,
+    borderRadius: sp.xs,
+    color: t.textSecondary,
+    cursor: "pointer",
+    fontSize: 16,
+    fontWeight: 300,
+    lineHeight: 1,
+    outline: "none",
+    transition: `background ${motion.fast}, color ${motion.fast}`,
+    userSelect: "none",
+  };
+
   return (
     <div className="mapbox-scope" style={{ width: "100%", height: "100%", position: "relative" }}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+      {/* Custom zoom controls */}
+      <div style={{ position: "absolute", bottom: sp.md, right: sp.md, display: "flex", flexDirection: "column", gap: 2 }}>
+        <button
+          style={btnBase}
+          onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; e.currentTarget.style.color = t.textPrimary; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = t.bgRaised; e.currentTarget.style.color = t.textSecondary; }}
+          onClick={() => mapRef.current?.zoomIn()}
+          aria-label="Zoom in"
+        >+</button>
+        <button
+          style={btnBase}
+          onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; e.currentTarget.style.color = t.textPrimary; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = t.bgRaised; e.currentTarget.style.color = t.textSecondary; }}
+          onClick={() => mapRef.current?.zoomOut()}
+          aria-label="Zoom out"
+        >−</button>
+      </div>
     </div>
   );
 }
