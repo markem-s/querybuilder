@@ -1,4 +1,8 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
+
+mapboxgl.accessToken = import.meta.env?.VITE_MAPBOX_TOKEN ?? "";
 import {
   ChevronDown,
   ChevronRight,
@@ -2551,74 +2555,48 @@ function MapToolbar() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   MAP PLACEHOLDER — GAP 2: uses filtered counts
+   MAP — real Mapbox GL map
    ══════════════════════════════════════════════════════════════ */
+const MAPBOX_STYLES = {
+  none:        "mapbox://styles/mapbox/empty-v9",
+  darkmatter:  "mapbox://styles/mapbox/dark-v11",
+  positron:    "mapbox://styles/mapbox/light-v11",
+  voyager:     "mapbox://styles/mapbox/streets-v12",
+  satellite:   "mapbox://styles/mapbox/satellite-streets-v12",
+  dark:        "mapbox://styles/mapbox/dark-v11",
+  light:       "mapbox://styles/mapbox/light-v11",
+  mutedlight:  "mapbox://styles/mapbox/light-v11",
+  mutednight:  "mapbox://styles/mapbox/dark-v11",
+};
+
 function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled }) {
-  const bgColors = { dark: "#0a0f1a", satellite: "#0d1a0d", terrain: "#1a150d", light: "#1a1a22" };
-  const bg = bgColors[baseMap] || bgColors.dark;
+  const containerRef = useRef(null);
+  const mapRef = useRef(null);
+  const styleUrl = MAPBOX_STYLES[baseMap] || MAPBOX_STYLES.darkmatter;
 
-  const visibleSources = sources.filter((s) => s.visible);
-
-  const points = useMemo(() => {
-    const pts = [];
-    visibleSources.forEach((src) => {
-      const fc = filteredCounts[src.id] || src.records;
-      const count = Math.min(Math.floor(fc / 800), 60);
-      for (let i = 0; i < count; i++) {
-        const cx = 400 + ((i * 97 + src.id.charCodeAt(2) * 31) % 600) - 300;
-        const cy = 250 + ((i * 53 + src.id.charCodeAt(2) * 17) % 400) - 200;
-        pts.push({ x: cx, y: cy, color: src.color, r: 2 + (i % 3), source: src.name });
-      }
+  // Init map
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const map = new mapboxgl.Map({
+      container: containerRef.current,
+      style: styleUrl,
+      center: [-73.985, 40.748],
+      zoom: 11,
+      attributionControl: false,
     });
-    return pts;
-  }, [visibleSources, filteredCounts]);
+    map.addControl(new mapboxgl.AttributionControl({ compact: true }));
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
+    mapRef.current = map;
+    return () => { map.remove(); mapRef.current = null; };
+  }, []);
+
+  // Swap style when baseMap changes
+  useEffect(() => {
+    if (mapRef.current) mapRef.current.setStyle(styleUrl);
+  }, [styleUrl]);
 
   return (
-    <svg width="100%" height="100%" viewBox="0 0 800 500" style={{ background: bg }}>
-      {/* Grid lines (map texture) */}
-      {Array.from({ length: 20 }).map((_, i) => (
-        <line key={`h${i}`} x1={0} y1={i * 25} x2={800} y2={i * 25} stroke={t.borderDark} strokeWidth={0.3} />
-      ))}
-      {Array.from({ length: 32 }).map((_, i) => (
-        <line key={`v${i}`} x1={i * 25} y1={0} x2={i * 25} y2={500} stroke={t.borderDark} strokeWidth={0.3} />
-      ))}
-
-      {/* AOI polygon placeholder */}
-      <polygon
-        points="250,120 450,100 520,250 480,350 300,380 220,280"
-        fill={t.yellow500 + "08"}
-        stroke={t.yellow500 + "40"}
-        strokeWidth={1.5}
-        strokeDasharray="6,3"
-      />
-      <text x={370} y={230} textAnchor="middle" fill={t.yellow500 + "60"} fontSize={11} fontFamily="IBM Plex Sans, sans-serif">
-        Downtown Sector 4
-      </text>
-
-      {/* Heatmap gradient (if enabled) */}
-      {heatmapEnabled && (
-        <>
-          <defs>
-            <radialGradient id="heatGrad">
-              <stop offset="0%" stopColor="#ff4400" stopOpacity="0.3" />
-              <stop offset="60%" stopColor="#ff8800" stopOpacity="0.1" />
-              <stop offset="100%" stopColor="#ff8800" stopOpacity="0" />
-            </radialGradient>
-          </defs>
-          <ellipse cx={380} cy={240} rx={160} ry={120} fill="url(#heatGrad)" />
-        </>
-      )}
-
-      {/* Data points */}
-      {points.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r={p.r} fill={p.color} fillOpacity={0.55} />
-      ))}
-
-      {/* Center label */}
-      <text x={400} y={470} textAnchor="middle" fill={t.textSubtle} fontSize={13} fontFamily="IBM Plex Sans, sans-serif">
-        Discover — {visibleSources.length} source{visibleSources.length !== 1 ? "s" : ""} active • {baseMap} base map
-      </text>
-    </svg>
+    <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
   );
 }
 
