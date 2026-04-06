@@ -2529,8 +2529,11 @@ function MapToolbar() {
         </div>
       </div>
 
+      {/* ── Spacer ── */}
+      <div style={{ flex: 1 }} />
+
       {/* ── Right group: tool buttons ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 0, flexShrink: 0, paddingLeft: sp.md }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 0, flexShrink: 0 }}>
         <ToolbarBtn icon={Flag} label="Flag" />
         <ToolbarDivider />
         <ToolbarBtn icon={Layers} label="Layers" />
