@@ -1982,7 +1982,7 @@ function ConditionRow({ condition, sources, onRemove }) {
    ══════════════════════════════════════════════════════════════ */
 function dtInputStyle(focused) {
   return {
-    flex: 1, padding: `${sp.sm}px ${sp.md}px`, ...type.body, fontSize: 12,
+    padding: `${sp.xs}px ${sp.sm}px`, ...type.body, fontSize: 11,
     borderRadius: sp.xs + 2, border: `1px solid ${focused ? t.yellow500 : t.borderSubtle}`,
     background: t.bgField, color: t.textPrimary, outline: "none",
     transition: "border-color 0.15s", width: "100%", boxSizing: "border-box",
@@ -2028,17 +2028,17 @@ function DTSingleInput({ label, dateValue, timeValue, onDateChange, onTimeChange
   const dateRef = useRef(null);
   useEffect(() => { if (autoFocus && dateRef.current) dateRef.current.focus(); }, [autoFocus]);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: sp.xs, flex: 1 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: sp.xs }}>
       {label && <DTFieldLabel>{label}</DTFieldLabel>}
-      <div style={{ display: "flex", gap: sp.sm }}>
-        <div style={{ flex: 2 }}>
+      <div style={{ display: "flex", gap: sp.xs }}>
+        <div style={{ width: 120, flexShrink: 0 }}>
           <input ref={dateRef} type="date" value={dateValue}
             onChange={(e) => onDateChange(e.target.value)}
             aria-label={label ? `${label} date` : "Date"}
             style={dtInputStyle(dateFocused)}
             onFocus={() => setDateFocused(true)} onBlur={() => setDateFocused(false)} />
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={{ width: 80, flexShrink: 0 }}>
           <input type="time" value={timeValue}
             onChange={(e) => onTimeChange(e.target.value)}
             aria-label={label ? `${label} time` : "Time"}
