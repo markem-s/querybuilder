@@ -66,11 +66,6 @@ import {
   ChevronLeft,
   ShieldAlert,
   AppWindow,
-  Share2,
-  AlertTriangle,
-  Zap,
-  Link,
-  CheckCircle2,
 } from "lucide-react";
 
 /* ── Arkem Design Tokens ──────────────────────────────────────── */
@@ -95,7 +90,6 @@ const t = {
   success: "#5f7b52",
   overlayDark: "#00000066",
   feedbackWarning: "#a88940",
-  feedbackSuccess: "#22C55E",
   /* Glass tokens */
   glassBg: "#0d0d0d",
   glassBorder: "#1e1e1e",
@@ -232,8 +226,8 @@ const INITIAL_SOURCE_GROUPS = [
     name: "Device Intelligence",
     collapsed: false,
     sources: [
-      { id: "ds1", name: "UTS Data", type: "geospatial", color: "#4A9EFF", records: 82340, visible: true, system: false, layerType: "point", opacity: 80, pointSize: 4, colorBy: "none", showLabels: false, blendMode: "normal", layers: [], tier: "free" },
-      { id: "ds2", name: "Starlink Devices", type: "geospatial", color: "#22C55E", records: 41200, visible: true, system: false, layerType: "point", opacity: 70, pointSize: 6, colorBy: "none", showLabels: false, blendMode: "additive", layers: [], tier: "pro" },
+      { id: "ds1", name: "Device Locations", type: "geospatial", color: "#4A9EFF", records: 82340, visible: true, system: false, layerType: "point", opacity: 80, pointSize: 4, colorBy: "none", showLabels: false, blendMode: "normal", layers: [] },
+      { id: "ds2", name: "Cell Tower Pings", type: "geospatial", color: "#22C55E", records: 41200, visible: true, system: false, layerType: "point", opacity: 70, pointSize: 6, colorBy: "none", showLabels: false, blendMode: "additive", layers: [] },
     ],
   },
   {
@@ -269,21 +263,12 @@ const INITIAL_SOURCE_GROUPS = [
     ],
   },
   {
-    id: "sg-events",
-    name: "Events",
-    collapsed: false,
-    sources: [
-      { id: "evt-01", name: "Crime Data", type: "geospatial", color: "#EF4444", records: 14820, visible: true, system: false, layerType: "point", opacity: 75, pointSize: 4, colorBy: "none", showLabels: false, blendMode: "normal", layers: [] },
-    ],
-  },
-  {
     id: "sg3",
     name: "System Generated",
     collapsed: false,
-    system: true,
     sources: [
-      { id: "sys-tracer-1", name: "Tracer Results", type: "system", color: "#A855F7", records: 0, visible: false, system: true, muted: true, layerType: "arc", opacity: 80, pointSize: 4, colorBy: "none", showLabels: false, blendMode: "normal", layers: [] },
-      { id: "sys-flagged-1", name: "Flagged Records", type: "system", color: "#EF4444", records: 0, visible: false, system: true, muted: true, layerType: "point", opacity: 80, pointSize: 4, colorBy: "none", showLabels: false, blendMode: "normal", layers: [] },
+      { id: "ds3", name: "Flagged Records", type: "system", color: "#F97316", records: 1847, visible: true, system: true, layerType: "icon", opacity: 100, pointSize: 8, colorBy: "Flagged Status", showLabels: true, blendMode: "normal", layers: [] },
+      { id: "ds4", name: "Tracer Results", type: "system", color: "#A855F7", records: 632, visible: false, system: true, layerType: "arc", opacity: 60, pointSize: 3, colorBy: "none", showLabels: false, blendMode: "normal", layers: [] },
     ],
   },
 ];
@@ -297,19 +282,6 @@ const BLEND_MODES = ["normal", "additive", "subtractive"];
 const COLOR_BY_OPTIONS = ["none", "Device Type", "Carrier", "Signal Strength", "Flagged Status", "Network Protocol"];
 
 const DISPLAY_CAP = 50000;
-
-/* ── Tier system ── */
-const TIER_RANK = { free: 0, pro: 1, enterprise: 2 };
-const CURRENT_USER_TIER = "pro";
-
-/* ── Available dataset catalog (tier-gated) ── */
-const DATASET_CATALOG = [
-  { id: "cat-1", name: "Device Locations", color: "#4A9EFF", records: 82340, tier: "free" },
-  { id: "cat-2", name: "Cell Tower Pings", color: "#22C55E", records: 41200, tier: "pro" },
-  { id: "cat-3", name: "IMSI Harvest Feed", color: "#F59E0B", records: 18900, tier: "pro" },
-  { id: "cat-4", name: "Network Intercept Logs", color: "#EC4899", records: 5430, tier: "enterprise" },
-  { id: "cat-5", name: "Satellite Imagery Events", color: "#8B5CF6", records: 2100, tier: "enterprise" },
-];
 
 /* ── Map style options ── */
 const MAP_STYLES = [
@@ -396,8 +368,6 @@ const FIELD_OPTIONS = {
   spatial: [
     { name: "Area of Interest", icon: Target, desc: "Named geographic zone" },
     { name: "Proximity to LOI", icon: Radar, desc: "Distance from a location of interest" },
-    { name: "Drawn Polygon", icon: Pentagon, desc: "Draw a custom polygon on the map" },
-    { name: "Saved Boundary", icon: Layers, desc: "Use a previously saved boundary" },
     { name: "Country", icon: Globe, desc: "Country-level boundary" },
     { name: "Region", icon: Map, desc: "State or administrative region" },
     { name: "City", icon: Navigation, desc: "City-level boundary" },
@@ -429,10 +399,7 @@ const OPERATOR_OPTIONS = {
 
 const NUMERIC_FIELDS = ["Signal Strength", "Duration in Area"];
 const DATE_FIELDS = ["Timestamp", "First Seen", "Last Seen"];
-const SPATIAL_FIELDS = ["Area of Interest", "Proximity to LOI", "Lat/Lng Bounds", "Drawn Polygon", "Saved Boundary"];
-const SAVED_BOUNDARIES = ["City Limits — NYC", "County — Manhattan", "Custom Zone A", "Custom Zone B"];
-const POLYGON_DRAW_FIELDS = ["Drawn Polygon"];
-const SAVED_BOUNDARY_FIELDS = ["Saved Boundary"];
+const SPATIAL_FIELDS = ["Area of Interest", "Proximity to LOI", "Lat/Lng Bounds"];
 
 /* ── Saved queries (simulated persistence) ── */
 const SAVED_QUERIES = [
@@ -469,6 +436,20 @@ function getOperatorsForField(field) {
 function readBack(c) {
   if (!c.field || !c.operator) return "Incomplete condition";
   const val = c.value || "…";
+
+  // Date field operators — format the stored value nicely
+  if (DATE_FIELDS.includes(c.field)) {
+    if (c.operator === "last N days") {
+      const n = parseInt(val, 10);
+      return `${c.field} in the last ${isNaN(n) ? val : n} day${n !== 1 ? "s" : ""}`;
+    }
+    if (c.operator === "between") {
+      return `${c.field} between ${val}`;
+    }
+    // before / after — strip T separator for display
+    return `${c.field} ${c.operator} ${val.replace("T", " ")}`;
+  }
+
   if (c.scope === "time" && c.operator === "between") return `${c.field} between ${val}`;
   if (c.scope === "spatial" && c.operator === "within") return `${c.field} within ${val}`;
   if (c.scope === "spatial" && c.operator === "within radius of") return `Within ${val} of ${c.field}`;
@@ -516,7 +497,7 @@ export default function DiscoverQueryBuilder() {
       logic: "AND",
       conditions: [
         { id: 1, scope: "spatial", field: "Area of Interest", operator: "within", value: "Downtown Sector 4", sourceScope: "all" },
-        { id: 2, scope: "time", field: "Timestamp", operator: "between", value: "Mar 1 – Mar 7", sourceScope: "all" },
+        { id: 2, scope: "time", field: "Timestamp", operator: "between", value: "2026-03-01 – 2026-03-07", sourceScope: "all" },
         { id: 3, scope: "attribute", field: "Device Type", operator: "equals", value: "Mobile", sourceScope: "ds1" },
       ],
     },
@@ -541,44 +522,12 @@ export default function DiscoverQueryBuilder() {
   /* GAP 4: Load Query flow */
   const [showLoadModal, setShowLoadModal] = useState(false);
 
-  /* ── System sources ── */
-  const [pendingSystemSources, setPendingSystemSources] = useState([]);
-  const [dismissedSystemSources, setDismissedSystemSources] = useState([]);
-
-  /* ── Share modal ── */
-  const [showShareModal, setShowShareModal] = useState(false);
-
-  /* ── Map settings advanced ── */
-  const [customStyleUrl, setCustomStyleUrl] = useState("");
-  const [advancedMapOpen, setAdvancedMapOpen] = useState(false);
-
   /* ── Device drawer ── */
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerSource, setDrawerSource] = useState("toolbar"); // "toolbar" | "marker"
   const [selectedDevice, setSelectedDevice] = useState(null);
 
   /* ── Shared map ref (set by MapPlaceholder once the map initialises) ── */
   const sharedMapRef = useRef(null);
-
-  /* ── Simulate a Tracer session completing 8s after mount ── */
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setPendingSystemSources([{
-        id: "sys-tracer-1",
-        name: "Tracer Results",
-        triggeredBy: "Tracer Session #4821",
-        recordCount: 4231,
-        color: "#A855F7",
-        layerType: "arc",
-      }]);
-    }, 8000);
-    return () => clearTimeout(t);
-  }, []);
-
-  /* ── Auto-accept pending system sources ── */
-  useEffect(() => {
-    pendingSystemSources.forEach((src) => acceptSystemSource(src));
-  }, [pendingSystemSources]);
 
   // ── Computed ──
   const totalConditions = useMemo(() => groups.reduce((s, g) => s + g.conditions.length, 0), [groups]);
@@ -598,22 +547,6 @@ export default function DiscoverQueryBuilder() {
 
   const isCapped = totalRecords > DISPLAY_CAP;
   const isFiltered = totalRecords < unfilteredTotal;
-  const computationModel = totalConditions > 0 ? "local" : "none";
-
-  /* Zero-return conflict diagnosis */
-  const conflictDiagnosis = useMemo(() => {
-    if (totalRecords > 0 || totalConditions === 0) return {};
-    const diagnosis = {};
-    groups.forEach((g) => {
-      g.conditions.forEach((cond) => {
-        // Simulate removal of this condition — if count goes above 0, it's conflicting
-        const withoutThisCond = groups.map((gr) => gr.id === g.id ? { ...gr, conditions: gr.conditions.filter((c) => c.id !== cond.id) } : gr);
-        const countWithout = Object.values(simulateFilteredCount(baseCounts, withoutThisCond)).reduce((s, n) => s + n, 0);
-        diagnosis[cond.id] = countWithout > 0 ? "conflicting" : "contributing";
-      });
-    });
-    return diagnosis;
-  }, [totalRecords, totalConditions, groups, baseCounts]);
 
   // ── Handlers ──
   const toggle = (key) => setActiveSection((prev) => (prev === key ? null : key));
@@ -671,16 +604,16 @@ export default function DiscoverQueryBuilder() {
     setSourceGroups((gs) => [...gs, { id: `sg${_sgid}`, name: `Group ${_sgid}`, collapsed: false, sources: [] }]);
   };
 
-  const addDatasetToGroup = (gid, catalogEntry) => {
+  const addDatasetToGroup = (gid) => {
+    const colors = ["#4A9EFF", "#22C55E", "#F59E0B", "#EC4899", "#8B5CF6", "#14B8A6"];
     const newDs = {
       id: `ds-${Date.now()}`,
-      name: catalogEntry?.name || "New Dataset",
+      name: "New Dataset",
       type: "geospatial",
-      color: catalogEntry?.color || "#4A9EFF",
-      records: catalogEntry?.records || 0,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      records: 0,
       visible: true,
       system: false,
-      tier: catalogEntry?.tier || "free",
       layerType: "point",
       opacity: 80,
       pointSize: 4,
@@ -732,7 +665,7 @@ export default function DiscoverQueryBuilder() {
 
   const pickScope = (v) => { setNewCondition((p) => ({ ...p, scope: v, field: "", operator: "", value: "" })); setAddStep(1); };
   const pickField = (v) => { setNewCondition((p) => ({ ...p, field: v, operator: "", value: "" })); setAddStep(2); };
-  const pickOp = (v) => { setNewCondition((p) => ({ ...p, operator: v })); setAddStep(3); };
+  const pickOp = (v) => { setNewCondition((p) => ({ ...p, operator: v, value: "" })); setAddStep(3); };
   const goBack = () => {
     if (addStep === 1) { setNewCondition((p) => ({ ...p, scope: "", field: "", operator: "", value: "" })); setAddStep(0); }
     else if (addStep === 2) { setNewCondition((p) => ({ ...p, field: "", operator: "", value: "" })); setAddStep(1); }
@@ -757,35 +690,6 @@ export default function DiscoverQueryBuilder() {
       [next[idx], next[targetIdx]] = [next[targetIdx], next[idx]];
       return next;
     });
-  };
-
-  /* ── System source handlers ── */
-  const acceptSystemSource = (src) => {
-    const origin = { triggeredBy: src.triggeredBy, recordCount: src.recordCount, addedAt: new Date(), workspaceVisible: true };
-    setSourceGroups((gs) => {
-      const sysGroup = gs.find((g) => g.id === "sg3");
-      const activatedSrc = (existing) => ({ ...existing, records: src.recordCount, visible: true, muted: false, layerType: src.layerType || existing.layerType, origin });
-      if (sysGroup) {
-        const existing = sysGroup.sources.find((s) => s.id === src.id);
-        if (existing && existing.muted) return gs.map((g) => g.id === "sg3" ? { ...g, sources: g.sources.map((s) => s.id === src.id ? activatedSrc(s) : s) } : g);
-        if (existing) return gs; // already active — skip
-        const newSrc = { id: src.id, name: src.name, type: "system", color: src.color, records: src.recordCount, visible: true, system: true, muted: false, layerType: src.layerType || "point", opacity: 80, pointSize: 4, colorBy: "none", showLabels: false, blendMode: "normal", layers: [], origin };
-        return gs.map((g) => g.id === "sg3" ? { ...g, sources: [...g.sources, newSrc] } : g);
-      }
-      const newSrc = { id: src.id, name: src.name, type: "system", color: src.color, records: src.recordCount, visible: true, system: true, muted: false, layerType: src.layerType || "point", opacity: 80, pointSize: 4, colorBy: "none", showLabels: false, blendMode: "normal", layers: [], origin };
-      return [...gs, { id: "sg3", name: "System Generated", collapsed: false, system: true, sources: [newSrc] }];
-    });
-    setPendingSystemSources((p) => p.filter((s) => s.id !== src.id));
-  };
-
-  const dismissSystemSource = (src) => {
-    setDismissedSystemSources((p) => [...p, src]);
-    setPendingSystemSources((p) => p.filter((s) => s.id !== src.id));
-  };
-
-  const readdSystemSource = (src) => {
-    setDismissedSystemSources((p) => p.filter((s) => s.id !== src.id));
-    acceptSystemSource(src);
   };
 
   /* ── Tooltip handlers ── */
@@ -814,8 +718,6 @@ export default function DiscoverQueryBuilder() {
     setSourceGroups(INITIAL_SOURCE_GROUPS);
     setQueryName("Untitled Query");
     setTooltipSelections(INITIAL_TOOLTIP_SELECTIONS);
-    setPendingSystemSources([]);
-    setDismissedSystemSources([]);
   };
 
   /* ── Render ── */
@@ -911,7 +813,6 @@ export default function DiscoverQueryBuilder() {
             onClear={clearAll}
             onCollapse={() => setPanelCollapsed(true)}
             onSave={() => setShowSaveModal(true)}
-            onShare={() => setShowShareModal(true)}
           />
 
           {/* ── Icon rail + content panel ── */}
@@ -1014,24 +915,12 @@ export default function DiscoverQueryBuilder() {
                 <div style={{ padding: sp.md, animation: `sectionFadeIn ${motion.fast} ${motion.easeOut} both` }}>
                   <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: t.textSubtle, marginBottom: sp.sm }}>DATA SOURCES & LAYERS</div>
 
-                  {/* Cap warning chip */}
-                  {isCapped && (
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: sp.sm, padding: `${sp.sm}px ${sp.md}px`, borderRadius: sp.xs, background: t.feedbackWarning + "18", border: `1px solid ${t.feedbackWarning}44`, marginBottom: sp.md }}>
-                      <AlertTriangle size={13} color={t.feedbackWarning} style={{ flexShrink: 0, marginTop: 1 }} />
-                      <span style={{ fontSize: 11, color: t.feedbackWarning, lineHeight: 1.4 }}>
-                        Displaying <strong>50,000</strong> of <strong>{totalRecords.toLocaleString()}</strong> — apply conditions to reduce.
-                      </span>
-                    </div>
-                  )}
-
-
                   {sourceGroups.map((grp) => (
                     <SourceGroupSection
                       key={grp.id}
                       group={grp}
                       filteredCounts={filteredCounts}
                       isFiltered={isFiltered}
-                      computationModel={computationModel}
                       onToggleCollapse={() => toggleSourceGroupCollapse(grp.id)}
                       onRenameGroup={(name) => renameSourceGroup(grp.id, name)}
                       onRemoveGroup={() => removeSourceGroup(grp.id)}
@@ -1040,7 +929,7 @@ export default function DiscoverQueryBuilder() {
                       onAddSubLayer={(sid) => addSourceSubLayer(sid)}
                       onRemoveSubLayer={(sid, lid) => removeSourceSubLayer(sid, lid)}
                       onUpdateSubLayer={(sid, lid, key, val) => updateSourceSubLayer(sid, lid, key, val)}
-                      onAddDataset={(entry) => addDatasetToGroup(grp.id, entry)}
+                      onAddDataset={() => addDatasetToGroup(grp.id)}
                       onRemoveSource={(sid) => removeSourceFromGroup(grp.id, sid)}
                     />
                   ))}
@@ -1055,24 +944,6 @@ export default function DiscoverQueryBuilder() {
                   >
                     <Plus size={11} /> Add Group
                   </button>
-
-                  {/* Recent system sources */}
-                  {dismissedSystemSources.length > 0 && (
-                    <div style={{ marginTop: sp.lg, borderTop: `1px solid ${t.borderDark}`, paddingTop: sp.md }}>
-                      <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: t.textSubtle, marginBottom: sp.sm }}>RECENT SYSTEM SOURCES</div>
-                      {dismissedSystemSources.map((sys) => (
-                        <div key={sys.id} style={{ display: "flex", alignItems: "center", gap: sp.sm, padding: `${sp.xs}px 0`, marginBottom: sp.xs }}>
-                          <Zap size={11} color={t.textSubtle} style={{ flexShrink: 0 }} />
-                          <span style={{ flex: 1, fontSize: 11, color: t.textSecondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sys.name}</span>
-                          <span style={{ fontSize: 10, color: t.textSubtle }}>{sys.recordCount.toLocaleString()} rec</span>
-                          <button onClick={() => readdSystemSource(sys)} style={{ fontSize: 10, padding: `2px ${sp.sm}px`, borderRadius: sp.xs, border: `1px solid ${t.borderMuted}`, background: "transparent", color: t.textSecondary, cursor: "pointer", outline: "none", flexShrink: 0 }}
-                            onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-                            onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-                          >Re-add</button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -1080,17 +951,6 @@ export default function DiscoverQueryBuilder() {
               {activeSection === "conditions" && (
                 <div style={{ padding: sp.md, animation: `sectionFadeIn ${motion.fast} ${motion.easeOut} both` }}>
                   <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: t.textSubtle, marginBottom: sp.sm }}>CONDITIONS</div>
-
-                  {/* Zero-return banner */}
-                  {totalRecords === 0 && totalConditions > 0 && (
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: sp.sm, padding: sp.md, borderRadius: sp.xs, background: "#EF444418", border: "1px solid #EF444444", marginBottom: sp.md }}>
-                      <AlertTriangle size={13} color="#EF4444" style={{ flexShrink: 0, marginTop: 1 }} />
-                      <span style={{ fontSize: 11, color: "#EF4444", lineHeight: 1.5 }}>
-                        No records match all active conditions. <strong>Conflicting conditions are highlighted in red</strong> — try removing them.
-                      </span>
-                    </div>
-                  )}
-
                   {groups.map((group, gi) => (
                     <div key={group.id}>
                       {gi > 0 && <InterGroupLabel />}
@@ -1100,7 +960,6 @@ export default function DiscoverQueryBuilder() {
                         groupCount={groups.length}
                         sources={sources}
                         canRemove={groups.length > 1}
-                        conflictDiagnosis={conflictDiagnosis}
                         onToggleLogic={() => toggleGroupLogic(group.id)}
                         onRemoveCondition={(cid) => removeCondition(group.id, cid)}
                         onAddCondition={() => startAdd(group.id)}
@@ -1183,38 +1042,6 @@ export default function DiscoverQueryBuilder() {
                       />
                     ))}
                   </div>
-
-                  {/* ─── Advanced ─── */}
-                  <button
-                    onClick={() => setAdvancedMapOpen((p) => !p)}
-                    style={{ width: "100%", display: "flex", alignItems: "center", gap: sp.sm, marginTop: sp.xl, padding: `${sp.sm}px 0`, background: "transparent", border: "none", cursor: "pointer", outline: "none", color: t.textSubtle }}
-                    onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-                    onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-                  >
-                    <div style={{ flex: 1, height: 1, background: t.borderDark }} />
-                    <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", flexShrink: 0 }}>ADVANCED</span>
-                    <ChevronDown size={11} style={{ transform: advancedMapOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s", flexShrink: 0 }} />
-                    <div style={{ flex: 1, height: 1, background: t.borderDark }} />
-                  </button>
-                  <Expandable open={advancedMapOpen}>
-                    <div style={{ paddingTop: sp.sm }}>
-                      <div style={{ fontSize: 10, color: t.textSubtle, marginBottom: sp.xs }}>Custom Mapbox style URL</div>
-                      <input
-                        value={customStyleUrl}
-                        onChange={(e) => setCustomStyleUrl(e.target.value)}
-                        placeholder="mapbox://styles/…"
-                        style={{ width: "100%", padding: `${sp.sm}px ${sp.md}px`, ...type.body, fontSize: 11, borderRadius: sp.xs, border: `1px solid ${t.borderSubtle}`, background: t.bgField, color: t.textPrimary, outline: "none", boxSizing: "border-box", transition: "border-color 0.15s" }}
-                        onFocus={(e) => (e.currentTarget.style.borderColor = t.yellow500)}
-                        onBlur={(e) => (e.currentTarget.style.borderColor = t.borderSubtle)}
-                      />
-                      <div style={{ display: "flex", alignItems: "flex-start", gap: sp.xs, marginTop: sp.sm, padding: sp.sm, borderRadius: sp.xs, background: t.bgField, border: `1px solid ${t.borderDark}` }}>
-                        <ShieldAlert size={11} color={t.textSubtle} style={{ flexShrink: 0, marginTop: 1 }} />
-                        <span style={{ fontSize: 10, color: t.textSubtle, lineHeight: 1.5 }}>
-                          Tile requests are made from your browser directly. No URL or tile request is logged by Arkem.
-                        </span>
-                      </div>
-                    </div>
-                  </Expandable>
                 </div>
               )}
 
@@ -1230,37 +1057,13 @@ export default function DiscoverQueryBuilder() {
 
       {/* ═══ MAP AREA ═══ */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        <MapPlaceholder sources={sources} filteredCounts={filteredCounts} baseMap={baseMap} customStyleUrl={customStyleUrl} heatmapEnabled={heatmapEnabled} drawerOpen={drawerOpen} onDeviceClick={(device) => { setDrawerSource("marker"); setSelectedDevice(device); setDrawerOpen(true); }} onMapReady={(map) => { sharedMapRef.current = map; }} />
-
-        {/* ─── Persistent map QueryBar overlay ─── */}
-        <div style={{ position: "absolute", bottom: sp.sm, left: "50%", transform: "translateX(-50%)", zIndex: 12, pointerEvents: "none" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: sp.sm, padding: `${sp.xs + 1}px ${sp.md}px`, background: "rgba(18,18,22,0.85)", backdropFilter: "blur(8px)", border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.4)", pointerEvents: "auto", whiteSpace: "nowrap" }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: t.textPrimary, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>{queryName}</span>
-            {totalConditions > 0 && (
-              <>
-                <span style={{ width: 1, height: 12, background: "rgba(255,255,255,0.15)", flexShrink: 0 }} />
-                <span style={{ fontSize: 11, color: t.textSecondary }}>{totalConditions} condition{totalConditions !== 1 ? "s" : ""}</span>
-              </>
-            )}
-            <span style={{ width: 1, height: 12, background: "rgba(255,255,255,0.15)", flexShrink: 0 }} />
-            <span style={{ fontSize: 11, color: t.textSecondary }}>
-              {isCapped ? "50,000+" : totalRecords.toLocaleString()} records
-              {computationModel === "local" && <span style={{ fontSize: 9, color: t.textSubtle, fontStyle: "italic" }}> · local</span>}
-            </span>
-            <span style={{ width: 1, height: 12, background: "rgba(255,255,255,0.15)", flexShrink: 0 }} />
-            <button onClick={() => setShowSaveModal(true)} style={{ background: "none", border: "none", cursor: "pointer", padding: `2px ${sp.xs}px`, borderRadius: sp.xs, fontSize: 11, fontWeight: 600, color: t.yellow500, outline: "none" }}
-              onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-              onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-            >Save</button>
-            <button onClick={() => setShowShareModal(true)} style={{ background: "none", border: "none", cursor: "pointer", padding: `2px ${sp.xs}px`, borderRadius: sp.xs, fontSize: 11, color: t.textSecondary, outline: "none" }}
-              onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-              onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-            >Share</button>
-          </div>
-        </div>
+        <MapPlaceholder sources={sources} filteredCounts={filteredCounts} baseMap={baseMap} heatmapEnabled={heatmapEnabled} drawerOpen={drawerOpen} onDeviceClick={(device) => { setSelectedDevice(device); setDrawerOpen(true); }} onMapReady={(map) => { sharedMapRef.current = map; }} />
       </div>
 
-      {/* ═══ RIGHT PANEL — drawer expands left, pushing toolbar inward ═══ */}
+      {/* ═══ TOOLBAR + DRAWER — shared floating container ═══
+           The container is always pinned right: sp.sm.
+           Drawer slides in from the right, flush against the toolbar's left edge.
+           No gap between them — they share one border/shadow surface. */}
       <div style={{
         position: "absolute",
         top: sp.sm,
@@ -1270,41 +1073,33 @@ export default function DiscoverQueryBuilder() {
         display: "flex",
         flexDirection: "row",
         alignItems: "stretch",
+        background: t.glassBg,
+        border: `1px solid ${t.glassBorder}`,
+        borderRadius: sp.xs,
+        boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)",
+        overflow: "hidden",
       }}>
 
-        {/* Clip — animates width 0→320, right-anchors drawer so it reveals from toolbar edge */}
-        <div style={{
-          position: "relative",
-          overflow: "hidden",
-          flexShrink: 0,
-          width: drawerOpen ? 320 : 0,
-          transition: prefersReduced ? "none" : `width ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}`,
-          pointerEvents: drawerOpen ? "auto" : "none",
-        }}>
-          <div
-            role="region"
-            aria-label="Device Details"
-            aria-hidden={!drawerOpen}
-            style={{
-              position: "absolute",
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: 320,
-              background: t.glassBg,
-              border: `1px solid ${t.glassBorder}`,
-              borderRadius: sp.xs,
-              boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)",
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-          >
+        {/* Device drawer — width animates 0 → 320, slides in from the right */}
+        <div
+          role="region"
+          aria-label="Device Details"
+          aria-hidden={!drawerOpen}
+          style={{
+            width: drawerOpen ? 320 : 0,
+            overflow: "hidden",
+            flexShrink: 0,
+            borderRight: drawerOpen ? `1px solid ${t.glassBorder}` : "none",
+            transition: prefersReduced ? "none" : `width ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}`,
+          }}
+        >
+          {/* Inner wrapper keeps the panel at its full 320px so content doesn't squish */}
+          <div style={{ width: 320, height: "100%", display: "flex", flexDirection: "column" }}>
             <DevicePanel device={selectedDevice} onClose={() => { setDrawerOpen(false); setSelectedDevice(null); }} />
           </div>
         </div>
 
-        {/* Toolbar — pushed left by drawer expanding, slides back when drawer closes */}
+        {/* Toolbar — always visible, flush right */}
         <div style={{ width: 44, flexShrink: 0 }}>
           <MapToolbar mapRef={sharedMapRef} />
         </div>
@@ -1320,18 +1115,6 @@ export default function DiscoverQueryBuilder() {
           totalConditions={totalConditions}
           baseMap={baseMap}
           onClose={() => setShowSaveModal(false)}
-          onSave={(name) => { setQueryName(name); setShowSaveModal(false); }}
-        />
-      )}
-
-      {showShareModal && (
-        <ShareModal
-          queryName={queryName}
-          sources={sources}
-          groups={groups}
-          totalConditions={totalConditions}
-          baseMap={baseMap}
-          onClose={() => setShowShareModal(false)}
         />
       )}
 
@@ -1346,7 +1129,7 @@ export default function DiscoverQueryBuilder() {
 /* ══════════════════════════════════════════════════════════════
    QUERY BAR
    ══════════════════════════════════════════════════════════════ */
-function QueryBar({ queryName, setQueryName, isEditingName, setIsEditingName, onClear, onCollapse, onSave, onShare }) {
+function QueryBar({ queryName, setQueryName, isEditingName, setIsEditingName, onClear, onCollapse, onSave }) {
   const [draftName, setDraftName] = useState(queryName);
   const isDirty = isEditingName && draftName !== queryName;
 
@@ -1426,9 +1209,6 @@ function QueryBar({ queryName, setQueryName, isEditingName, setIsEditingName, on
             <Save size={14} color={t.textPrimary} />
           </button>
         )}
-
-        {/* Share */}
-        <QBarIcon icon={<Share2 size={14} />} title="Share query" onClick={onShare} />
 
         {/* Clear */}
         <QBarIcon icon={<RotateCcw size={14} />} title="Clear all" onClick={onClear} />
@@ -1518,14 +1298,12 @@ function CountBadge({ n }) {
    Replaces Kepler's Layers panel: visibility, type, opacity,
    point size, color-by, labels, blend mode — all per source.
    ══════════════════════════════════════════════════════════════ */
-function SourceGroupSection({ group, filteredCounts, isFiltered, computationModel, onToggleCollapse, onRenameGroup, onRemoveGroup, onToggleSource, onUpdateLayer, onAddSubLayer, onRemoveSubLayer, onUpdateSubLayer, onAddDataset, onRemoveSource }) {
+function SourceGroupSection({ group, filteredCounts, isFiltered, onToggleCollapse, onRenameGroup, onRemoveGroup, onToggleSource, onUpdateLayer, onAddSubLayer, onRemoveSubLayer, onUpdateSubLayer, onAddDataset, onRemoveSource }) {
   const [renaming, setRenaming] = useState(false);
   const [renameVal, setRenameVal] = useState(group.name);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [hoveringHeader, setHoveringHeader] = useState(false);
-  const [datasetPickerOpen, setDatasetPickerOpen] = useState(false);
   const visibleCount = group.sources.filter((s) => s.visible).length;
-  const accessibleDatasets = DATASET_CATALOG.filter((d) => TIER_RANK[d.tier] <= TIER_RANK[CURRENT_USER_TIER]);
 
   const commitRename = () => {
     if (renameVal.trim()) onRenameGroup(renameVal.trim());
@@ -1575,8 +1353,8 @@ function SourceGroupSection({ group, filteredCounts, isFiltered, computationMode
           />
         ) : (
           <span
-            style={{ flex: 1, fontSize: 11, fontWeight: 600, color: t.textSecondary, cursor: group.system ? "default" : "text", userSelect: "none" }}
-            onDoubleClick={() => { if (!group.system) { setRenameVal(group.name); setRenaming(true); } }}
+            style={{ flex: 1, fontSize: 11, fontWeight: 600, color: t.textSecondary, cursor: "text", userSelect: "none" }}
+            onDoubleClick={() => { setRenameVal(group.name); setRenaming(true); }}
           >
             {group.name}
           </span>
@@ -1587,8 +1365,8 @@ function SourceGroupSection({ group, filteredCounts, isFiltered, computationMode
           {visibleCount}/{group.sources.length}
         </span>
 
-        {/* Delete group — hover reveal (not shown for system groups) */}
-        {hoveringHeader && !renaming && !group.system && (
+        {/* Delete group — hover reveal */}
+        {hoveringHeader && !renaming && (
           confirmDelete ? (
             <div style={{ display: "flex", alignItems: "center", gap: sp.xs, flexShrink: 0 }}>
               <span style={{ fontSize: 10, color: t.danger }}>Delete?</span>
@@ -1637,44 +1415,25 @@ function SourceGroupSection({ group, filteredCounts, isFiltered, computationMode
               source={src}
               filteredCount={filteredCounts[src.id]}
               isFiltered={isFiltered}
-              computationModel={computationModel}
               onToggle={() => onToggleSource(src.id)}
               onUpdateLayer={(key, val) => onUpdateLayer(src.id, key, val)}
               onAddSubLayer={() => onAddSubLayer(src.id)}
               onRemoveSubLayer={(lid) => onRemoveSubLayer(src.id, lid)}
               onUpdateSubLayer={(lid, key, val) => onUpdateSubLayer(src.id, lid, key, val)}
-              onRemove={src.system ? null : () => onRemoveSource(src.id)}
+              onRemove={() => onRemoveSource(src.id)}
             />
           ))}
 
-          {/* Add Dataset picker (hidden for system groups) */}
-          {!group.system && <>
-            <button
-              onClick={() => setDatasetPickerOpen((p) => !p)}
-              style={{ ...addBtnStyle, marginTop: group.sources.length > 0 ? sp.xs : 0 }}
-              onMouseEnter={addBtnHover} onMouseLeave={addBtnLeave}
-              onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-              onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-            >
-              <Plus size={11} /> Add Dataset
-            </button>
-            <Expandable open={datasetPickerOpen} duration={motion.fast}>
-              <div style={{ marginTop: sp.xs, marginBottom: sp.xs, border: `1px solid ${t.borderDark}`, borderRadius: sp.xs, overflow: "hidden" }}>
-                {accessibleDatasets.map((ds) => (
-                  <button key={ds.id} onClick={() => { onAddDataset(ds); setDatasetPickerOpen(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: sp.sm, padding: `${sp.xs}px ${sp.sm}px`, background: "transparent", border: "none", borderBottom: `1px solid ${t.borderDark}`, cursor: "pointer", outline: "none", textAlign: "left" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = t.bgHover)}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                    onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-                    onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-                  >
-                    <span style={{ width: 8, height: 8, borderRadius: 2, background: ds.color, flexShrink: 0 }} />
-                    <span style={{ flex: 1, fontSize: 11, color: t.textPrimary }}>{ds.name}</span>
-                    <span style={{ fontSize: 10, color: t.textSubtle }}>{ds.records.toLocaleString()}</span>
-                  </button>
-                ))}
-              </div>
-            </Expandable>
-          </>}
+          {/* Add Dataset to this group */}
+          <button
+            onClick={onAddDataset}
+            style={{ ...addBtnStyle, marginTop: group.sources.length > 0 ? sp.xs : 0, marginBottom: sp.xs }}
+            onMouseEnter={addBtnHover} onMouseLeave={addBtnLeave}
+            onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
+            onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
+          >
+            <Plus size={11} /> Add Dataset
+          </button>
         </div>
       </Expandable>
     </div>
@@ -1740,7 +1499,7 @@ function SubLayerRow({ layer, sourceColor, onUpdate, onRemove }) {
   );
 }
 
-function SourceRow({ source, filteredCount, isFiltered, computationModel, onToggle, onUpdateLayer, onAddSubLayer, onRemoveSubLayer, onUpdateSubLayer, onRemove }) {
+function SourceRow({ source, filteredCount, isFiltered, onToggle, onUpdateLayer, onAddSubLayer, onRemoveSubLayer, onUpdateSubLayer, onRemove }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -1752,21 +1511,21 @@ function SourceRow({ source, filteredCount, isFiltered, computationModel, onTogg
         gap: sp.sm,
         padding: `${sp.xs}px 0`,
         background: "transparent",
-        opacity: source.muted ? 0.35 : source.visible ? 1 : 0.45,
+        opacity: source.visible ? 1 : 0.45,
         transition: `opacity ${motion.fast} ${motion.easeOut}`,
       }}>
-        {!source.system && <GripVertical size={12} color={t.textSubtle} style={{ cursor: "grab", flexShrink: 0, marginTop: 3 }} aria-hidden="true" />}
+        <GripVertical size={12} color={t.textSubtle} style={{ cursor: "grab", flexShrink: 0, marginTop: 3 }} aria-hidden="true" />
 
         {/* Layer type icon — carries the source color */}
         <span style={{ flexShrink: 0, marginTop: 2, display: "flex", alignItems: "center" }} aria-hidden="true">
-          <LayerTypeIcon type={source.layerType} color={source.muted ? t.textSubtle : source.color} size={8} />
+          <LayerTypeIcon type={source.layerType} color={source.color} size={8} />
         </span>
 
         {/* Name + counter stacked */}
-        <div style={{ flex: 1, minWidth: 0, cursor: source.muted ? "default" : "pointer" }} onClick={() => !source.muted && setExpanded(!expanded)}>
+        <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setExpanded(!expanded)}>
           <div style={{ display: "flex", alignItems: "center", gap: sp.xs }}>
-            <span style={{ ...type.body, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 1, fontStyle: source.muted ? "italic" : "normal", color: source.muted ? t.textSubtle : undefined }}>{source.name}</span>
-            {!source.muted && (source.layers || []).length > 0 && (
+            <span style={{ ...type.body, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 1 }}>{source.name}</span>
+            {(source.layers || []).length > 0 && (
               <span style={{
                 display: "inline-flex", alignItems: "center", gap: 2,
                 fontSize: 9, fontWeight: 600,
@@ -1782,16 +1541,14 @@ function SourceRow({ source, filteredCount, isFiltered, computationModel, onTogg
               </span>
             )}
             {source.system && (
-              <span style={{ fontSize: 9, fontWeight: 500, color: source.muted ? t.textSubtle : t.feedbackWarning, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0, lineHeight: "14px" }}>
+              <span style={{ fontSize: 9, fontWeight: 500, color: t.feedbackWarning, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0, lineHeight: "14px" }}>
                 SYS
               </span>
             )}
           </div>
-          {/* Counter / muted status subheading */}
-          <div style={{ ...type.secondary, fontSize: 10, color: t.textSubtle, marginTop: 1, display: "flex", alignItems: "center", gap: sp.xs, flexWrap: "wrap" }}>
-            {source.muted ? (
-              <span style={{ fontStyle: "italic" }}>Not triggered</span>
-            ) : source.visible && isFiltered && filteredCount !== undefined ? (
+          {/* Counter as subheading below name */}
+          <div style={{ ...type.secondary, fontSize: 10, color: t.textSubtle, marginTop: 1, display: "flex", alignItems: "center", gap: sp.xs }}>
+            {source.visible && isFiltered && filteredCount !== undefined ? (
               <>
                 <span style={{ color: t.textSecondary, fontWeight: 600 }}>{filteredCount.toLocaleString()}</span>
                 <span style={{ color: t.textSubtle }}>/</span>
@@ -1800,21 +1557,12 @@ function SourceRow({ source, filteredCount, isFiltered, computationModel, onTogg
             ) : (
               <span>{source.records.toLocaleString()}</span>
             )}
-            {!source.muted && computationModel === "local" && source.visible && (
-              <span style={{ fontSize: 9, color: t.textSubtle, fontStyle: "italic" }}>· calculated locally</span>
-            )}
           </div>
-          {/* Origin metadata for system sources */}
-          {!source.muted && source.origin && (
-            <div style={{ fontSize: 9, color: t.textSubtle, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              Added via {source.origin.triggeredBy} · {source.origin.recordCount.toLocaleString()} records · {source.origin.workspaceVisible ? "Visible to workspace" : "Private"}
-            </div>
-          )}
         </div>
 
-        {/* Eye/hide + settings — hidden for muted (not-yet-triggered) sources */}
+        {/* Eye/hide + settings — grouped right, aligned to title */}
         <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
-          {!source.muted && <button
+          <button
             onClick={onToggle}
             aria-label={source.visible ? `Hide ${source.name}` : `Show ${source.name}`}
             style={{ background: "none", border: "none", cursor: "pointer", padding: sp.xs, borderRadius: sp.xs, outline: "none", opacity: 0.6, transition: "opacity 0.1s" }}
@@ -1824,8 +1572,8 @@ function SourceRow({ source, filteredCount, isFiltered, computationModel, onTogg
             onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
           >
             {source.visible ? <Eye size={13} color={t.textSubtle} /> : <EyeOff size={13} color={t.textSubtle} />}
-          </button>}
-          {!source.muted && <button
+          </button>
+          <button
             onClick={() => setExpanded(!expanded)}
             aria-label={expanded ? "Collapse layer settings" : "Expand layer settings"}
             style={{ background: "none", border: "none", cursor: "pointer", padding: sp.xs, borderRadius: sp.xs, outline: "none", opacity: expanded ? 1 : 0.6, transition: "opacity 0.1s" }}
@@ -1835,7 +1583,7 @@ function SourceRow({ source, filteredCount, isFiltered, computationModel, onTogg
             onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
           >
             <Sliders size={13} color={t.textSubtle} />
-          </button>}
+          </button>
           {onRemove && (
             <button
               onClick={onRemove}
@@ -2072,7 +1820,7 @@ function InterGroupLabel() {
   );
 }
 
-function ConditionGroup({ group, groupIndex, groupCount, sources, canRemove, conflictDiagnosis, onToggleLogic, onRemoveCondition, onAddCondition, onRemoveGroup, onRename, onMoveUp, onMoveDown, isAdding, addStep, newCondition, onPickScope, onPickField, onPickOp, onConfirm, onCancel, onBack, onValueChange, onSourceScopeChange }) {
+function ConditionGroup({ group, groupIndex, groupCount, sources, canRemove, onToggleLogic, onRemoveCondition, onAddCondition, onRemoveGroup, onRename, onMoveUp, onMoveDown, isAdding, addStep, newCondition, onPickScope, onPickField, onPickOp, onConfirm, onCancel, onBack, onValueChange, onSourceScopeChange }) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(group.name);
 
@@ -2155,7 +1903,7 @@ function ConditionGroup({ group, groupIndex, groupCount, sources, canRemove, con
                 <span style={{ ...type.caption, fontSize: 9, fontWeight: 600, color: t.borderSubtle, letterSpacing: "0.06em" }}>{group.logic}</span>
               </div>
             )}
-            <ConditionRow condition={cond} sources={sources} diagnosis={conflictDiagnosis?.[cond.id]} onRemove={() => onRemoveCondition(cond.id)} />
+            <ConditionRow condition={cond} sources={sources} onRemove={() => onRemoveCondition(cond.id)} />
           </div>
         ))}
 
@@ -2195,23 +1943,19 @@ function ConditionGroup({ group, groupIndex, groupCount, sources, canRemove, con
 }
 
 /* ── Condition row ── */
-function ConditionRow({ condition, sources, diagnosis, onRemove }) {
+function ConditionRow({ condition, sources, onRemove }) {
   const iconMap = { spatial: Target, time: CalendarDays, attribute: Sliders };
   const Icon = iconMap[condition.scope] || Tag;
   const scopedSource = condition.sourceScope && condition.sourceScope !== "all" ? sources.find((s) => s.id === condition.sourceScope) : null;
-  const diagColor = diagnosis === "conflicting" ? "#EF4444" : diagnosis === "contributing" ? "#22C55E" : null;
 
   return (
     <div style={{
       display: "flex", alignItems: "flex-start", gap: sp.sm,
       padding: `${sp.sm}px ${sp.sm}px ${sp.sm}px ${sp.md}px`,
       borderRadius: sp.xs,
-      background: diagnosis === "conflicting" ? "#EF444410" : t.bgField,
-      border: diagnosis === "conflicting" ? "1px solid #EF444430" : "1px solid transparent",
+      background: t.bgField,
       marginBottom: sp.xs,
-      transition: "background 0.2s, border-color 0.2s",
     }}>
-      {diagColor && <span style={{ width: 6, height: 6, borderRadius: "50%", background: diagColor, flexShrink: 0, marginTop: 5 }} />}
       <Icon size={13} color={t.textSubtle} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
       <span style={{ flex: 1, ...type.body, fontSize: 12, color: t.textPrimary, display: "flex", alignItems: "center", gap: sp.sm, flexWrap: "wrap" }}>
         {readBack(condition)}
@@ -2229,6 +1973,221 @@ function ConditionRow({ condition, sources, diagnosis, onRemove }) {
       >
         <X size={11} color={t.textSubtle} />
       </button>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DATE / TIME VALUE INPUT — used in AddFlow step 3 for date fields
+   ══════════════════════════════════════════════════════════════ */
+function dtInputStyle(focused) {
+  return {
+    flex: 1, padding: `${sp.sm}px ${sp.md}px`, ...type.body, fontSize: 12,
+    borderRadius: sp.xs + 2, border: `1px solid ${focused ? t.yellow500 : t.borderSubtle}`,
+    background: t.bgField, color: t.textPrimary, outline: "none",
+    transition: "border-color 0.15s", width: "100%", boxSizing: "border-box",
+    WebkitAppearance: "none", colorScheme: "dark",
+  };
+}
+
+function DTFieldLabel({ children }) {
+  return (
+    <span style={{ ...type.caption, fontSize: 10, color: t.textSubtle, letterSpacing: "0.04em" }}>
+      {children}
+    </span>
+  );
+}
+
+function DTConfirmButton({ disabled, onClick }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-disabled={disabled}
+      style={{
+        padding: `${sp.sm}px ${sp.xl}px`, ...type.body, fontSize: 12, fontWeight: 600,
+        borderRadius: sp.xs + 2, border: "none",
+        background: disabled ? t.borderLight : t.yellow500,
+        color:      disabled ? t.textSubtle  : t.textInverse,
+        cursor:     disabled ? "not-allowed" : "pointer",
+        outline: "none", boxShadow: focused ? focusRing : "none",
+        transition: "background 0.15s", flexShrink: 0, whiteSpace: "nowrap",
+      }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    >
+      Add filter
+    </button>
+  );
+}
+
+function DTSingleInput({ label, dateValue, timeValue, onDateChange, onTimeChange, autoFocus }) {
+  const [dateFocused, setDateFocused] = useState(false);
+  const [timeFocused, setTimeFocused] = useState(false);
+  const dateRef = useRef(null);
+  useEffect(() => { if (autoFocus && dateRef.current) dateRef.current.focus(); }, [autoFocus]);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: sp.xs, flex: 1 }}>
+      {label && <DTFieldLabel>{label}</DTFieldLabel>}
+      <div style={{ display: "flex", gap: sp.sm }}>
+        <div style={{ flex: 2 }}>
+          <input ref={dateRef} type="date" value={dateValue}
+            onChange={(e) => onDateChange(e.target.value)}
+            aria-label={label ? `${label} date` : "Date"}
+            style={dtInputStyle(dateFocused)}
+            onFocus={() => setDateFocused(true)} onBlur={() => setDateFocused(false)} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <input type="time" value={timeValue}
+            onChange={(e) => onTimeChange(e.target.value)}
+            aria-label={label ? `${label} time` : "Time"}
+            style={dtInputStyle(timeFocused)}
+            onFocus={() => setTimeFocused(true)} onBlur={() => setTimeFocused(false)} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NDaysStepper({ value, onChange }) {
+  const n = parseInt(value, 10) || 7;
+  const [focused, setFocused] = useState(false);
+  const presets = [1, 7, 14, 30, 90];
+  const btnStyle = {
+    width: 32, height: 32, borderRadius: sp.xs, border: `1px solid ${t.borderSubtle}`,
+    background: t.bgField, color: t.textPrimary, fontSize: 16, lineHeight: 1,
+    cursor: "pointer", outline: "none", display: "flex", alignItems: "center", justifyContent: "center",
+    transition: "border-color 0.15s, background 0.15s",
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
+      <div style={{ display: "flex", alignItems: "center", gap: sp.sm }}>
+        <button onClick={() => onChange(String(Math.max(1, n - 1)))} aria-label="Decrease days" style={btnStyle}
+          onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; e.currentTarget.style.borderColor = t.borderMuted; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = t.bgField;  e.currentTarget.style.borderColor = t.borderSubtle; }}
+          onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
+          onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}>−</button>
+        <div style={{ flex: 1, position: "relative" }}>
+          <input type="number" min={1} max={365} value={n}
+            onChange={(e) => onChange(e.target.value)} aria-label="Number of days"
+            style={{ ...dtInputStyle(focused), textAlign: "center", fontWeight: 600, paddingRight: 40 }}
+            onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+          <span style={{ position: "absolute", right: sp.md, top: "50%", transform: "translateY(-50%)",
+            ...type.secondary, color: t.textSubtle, pointerEvents: "none" }}>days</span>
+        </div>
+        <button onClick={() => onChange(String(Math.min(365, n + 1)))} aria-label="Increase days" style={btnStyle}
+          onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; e.currentTarget.style.borderColor = t.borderMuted; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = t.bgField;  e.currentTarget.style.borderColor = t.borderSubtle; }}
+          onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
+          onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}>+</button>
+      </div>
+      <div style={{ display: "flex", gap: sp.xs, flexWrap: "wrap" }}>
+        {presets.map((p) => (
+          <button key={p} onClick={() => onChange(String(p))} aria-pressed={n === p}
+            style={{
+              padding: `${sp.xs}px ${sp.sm + 2}px`, ...type.caption, borderRadius: sp.xs + 2,
+              border: `1px solid ${n === p ? t.yellow500 : t.borderDark}`,
+              background: n === p ? t.yellow950 : t.bgField,
+              color: n === p ? t.textHighlighted : t.textSubtle,
+              cursor: "pointer", outline: "none", transition: "border-color 0.15s, background 0.15s, color 0.15s",
+            }}
+            onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
+            onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}>
+            {p === 1 ? "Today" : `${p}d`}
+          </button>
+        ))}
+      </div>
+      <span style={{ ...type.caption, color: t.textSubtle }}>
+        Matches records from the last {n} day{n !== 1 ? "s" : ""} up to now
+      </span>
+    </div>
+  );
+}
+
+function DateTimeValueInput({ operator, value, onChange, onConfirm }) {
+  const parseInitial = () => {
+    if (operator === "between") {
+      const parts = (value || "").split(" \u2013 ");
+      const [d1, t1] = (parts[0] || "").split("T");
+      const [d2, t2] = (parts[1] || "").split("T");
+      return { date1: d1 || "", time1: t1 || "", date2: d2 || "", time2: t2 || "" };
+    }
+    if (operator === "last N days") return { n: value || "7" };
+    const [d, tm] = (value || "").split("T");
+    return { date1: d || "", time1: tm || "" };
+  };
+  const [local, setLocal] = useState(parseInitial);
+  const patch = (key, val) => setLocal((prev) => ({ ...prev, [key]: val }));
+
+  useEffect(() => {
+    let next = "";
+    if (operator === "before" || operator === "after") {
+      next = local.date1 ? (local.time1 ? `${local.date1}T${local.time1}` : local.date1) : "";
+    } else if (operator === "between") {
+      const start = local.date1 ? (local.time1 ? `${local.date1}T${local.time1}` : local.date1) : "";
+      const end   = local.date2 ? (local.time2 ? `${local.date2}T${local.time2}` : local.date2) : "";
+      next = start && end ? `${start} \u2013 ${end}` : "";
+    } else if (operator === "last N days") {
+      next = local.n || "";
+    }
+    onChange(next);
+  }, [local, operator]);
+
+  const isValid = (() => {
+    if (operator === "before" || operator === "after") return !!local.date1;
+    if (operator === "between") return !!local.date1 && !!local.date2;
+    if (operator === "last N days") return parseInt(local.n, 10) > 0;
+    return false;
+  })();
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: sp.md }}
+      onKeyDown={(e) => { if (e.key === "Enter" && isValid) onConfirm(); }}>
+
+      {(operator === "before" || operator === "after") && (
+        <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
+          <div style={{ display: "flex", alignItems: "center", gap: sp.xs, ...type.secondary, color: t.textSubtle }}>
+            <CalendarDays size={12} />
+            <span>Pick a date &amp; time</span>
+          </div>
+          <DTSingleInput
+            dateValue={local.date1} timeValue={local.time1}
+            onDateChange={(v) => patch("date1", v)} onTimeChange={(v) => patch("time1", v)}
+            autoFocus />
+        </div>
+      )}
+
+      {operator === "between" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
+          <div style={{ display: "flex", alignItems: "center", gap: sp.xs, ...type.secondary, color: t.textSubtle }}>
+            <CalendarDays size={12} />
+            <span>Select a date range</span>
+          </div>
+          <DTSingleInput label="From"
+            dateValue={local.date1} timeValue={local.time1}
+            onDateChange={(v) => patch("date1", v)} onTimeChange={(v) => patch("time1", v)}
+            autoFocus />
+          <DTSingleInput label="To"
+            dateValue={local.date2} timeValue={local.time2}
+            onDateChange={(v) => patch("date2", v)} onTimeChange={(v) => patch("time2", v)} />
+        </div>
+      )}
+
+      {operator === "last N days" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
+          <div style={{ display: "flex", alignItems: "center", gap: sp.xs, ...type.secondary, color: t.textSubtle }}>
+            <Clock size={12} />
+            <span>How many days back?</span>
+          </div>
+          <NDaysStepper value={local.n} onChange={(v) => patch("n", v)} />
+        </div>
+      )}
+
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <DTConfirmButton disabled={!isValid} onClick={onConfirm} />
+      </div>
+      <span style={{ ...type.caption, color: t.textSubtle }}>Press Enter to confirm</span>
     </div>
   );
 }
@@ -2358,83 +2317,53 @@ function AddFlow({ step, nc, sources, onPickScope, onPickField, onPickOp, onConf
 
       {/* ─── Step 3: Value input ─── */}
       {step === 3 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
-
-          {/* Drawn Polygon: paste geometry */}
-          {POLYGON_DRAW_FIELDS.includes(nc.field) ? (
+        DATE_FIELDS.includes(nc.field)
+          ? (
+            <DateTimeValueInput
+              key={nc.operator}
+              operator={nc.operator}
+              value={nc.value}
+              onChange={onValueChange}
+              onConfirm={onConfirm}
+            />
+          )
+          : (
             <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
-              <textarea
-                autoFocus
-                value={nc.value}
-                onChange={(e) => onValueChange(e.target.value)}
-                placeholder={"Paste GeoJSON, WKT, or coordinate pairs\ne.g. POLYGON((lng lat, …))"}
-                rows={5}
-                style={{
-                  width: "100%", padding: `${sp.sm}px ${sp.md}px`, ...type.body, fontSize: 11,
-                  borderRadius: sp.xs, border: `1px solid ${t.borderSubtle}`, background: t.bgField,
-                  color: t.textPrimary, outline: "none", resize: "vertical", boxSizing: "border-box",
-                  fontFamily: "monospace", lineHeight: 1.5, transition: "border-color 0.15s",
-                }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = t.yellow500)}
-                onBlur={(e) => (e.currentTarget.style.borderColor = t.borderSubtle)}
-              />
-              <span style={{ fontSize: 10, color: t.textSubtle }}>Accepts GeoJSON geometry, WKT, or space-separated coordinate pairs.</span>
-            </div>
-          ) : SAVED_BOUNDARY_FIELDS.includes(nc.field) ? (
-            /* Saved Boundary: dropdown */
-            <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
-              {SAVED_BOUNDARIES.map((b) => (
-                <button key={b} onClick={() => onValueChange(b)} style={{ display: "flex", alignItems: "center", gap: sp.sm, padding: `${sp.sm}px ${sp.md}px`, borderRadius: sp.xs, border: `1px solid ${nc.value === b ? t.yellow500 : t.borderDark}`, background: nc.value === b ? t.yellow950 : "transparent", color: t.textPrimary, cursor: "pointer", outline: "none", textAlign: "left", transition: "border-color 0.15s, background 0.15s" }}
+              <div style={{ display: "flex", gap: sp.sm, alignItems: "stretch" }}>
+                <input
+                  autoFocus
+                  value={nc.value}
+                  onChange={(e) => onValueChange(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && nc.value && onConfirm()}
+                  placeholder={nc.scope === "spatial" ? "e.g. Downtown Sector 4" : "Enter value\u2026"}
+                  style={{
+                    flex: 1, padding: `${sp.sm}px ${sp.md}px`, ...type.body, fontSize: 12,
+                    borderRadius: sp.sm, border: `1px solid ${t.borderSubtle}`, background: t.bgField,
+                    color: t.textPrimary, outline: "none", transition: "border-color 0.15s",
+                  }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = t.yellow500)}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = t.borderSubtle)}
+                />
+                <button
+                  onClick={onConfirm}
+                  disabled={!nc.value}
+                  style={{
+                    padding: `${sp.sm}px ${sp.xl}px`, ...type.body, fontSize: 12, fontWeight: 600,
+                    borderRadius: sp.sm, border: "none",
+                    background: nc.value ? t.yellow500 : t.borderLight,
+                    color: nc.value ? t.textInverse : t.textSubtle,
+                    cursor: nc.value ? "pointer" : "not-allowed", outline: "none",
+                    transition: "background 0.15s, transform 0.1s",
+                  }}
                   onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
                   onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                 >
-                  <Layers size={12} color={nc.value === b ? t.yellow500 : t.textSubtle} style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: 12 }}>{b}</span>
+                  Add filter
                 </button>
-              ))}
+              </div>
+              <span style={{ ...type.secondary, fontSize: 10, color: t.textSubtle }}>Press Enter to confirm</span>
             </div>
-          ) : (
-            /* Default: text input */
-            <div style={{ display: "flex", gap: sp.sm, alignItems: "stretch" }}>
-              <input
-                autoFocus
-                value={nc.value}
-                onChange={(e) => onValueChange(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && nc.value && onConfirm()}
-                placeholder={nc.scope === "spatial" ? "e.g. Downtown Sector 4" : nc.scope === "time" ? "e.g. Mar 1 – Mar 7" : "Enter value\u2026"}
-                style={{
-                  flex: 1, padding: `${sp.sm}px ${sp.md}px`, ...type.body, fontSize: 12,
-                  borderRadius: sp.sm, border: `1px solid ${t.borderSubtle}`, background: t.bgField,
-                  color: t.textPrimary, outline: "none", transition: "border-color 0.15s",
-                }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = t.yellow500)}
-                onBlur={(e) => (e.currentTarget.style.borderColor = t.borderSubtle)}
-              />
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: sp.sm, justifyContent: "flex-end" }}>
-            <button
-              onClick={onConfirm}
-              disabled={!nc.value}
-              style={{
-                padding: `${sp.sm}px ${sp.xl}px`, ...type.body, fontSize: 12, fontWeight: 600,
-                borderRadius: sp.sm, border: "none",
-                background: nc.value ? t.yellow500 : t.borderLight,
-                color: nc.value ? t.textInverse : t.textSubtle,
-                cursor: nc.value ? "pointer" : "not-allowed", outline: "none",
-                transition: "background 0.15s",
-              }}
-              onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-              onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-            >
-              Add filter
-            </button>
-          </div>
-          {!POLYGON_DRAW_FIELDS.includes(nc.field) && !SAVED_BOUNDARY_FIELDS.includes(nc.field) && (
-            <span style={{ ...type.secondary, fontSize: 10, color: t.textSubtle }}>Press Enter to confirm</span>
-          )}
-        </div>
+          )
       )}
 
       {/* Source scope — collapsed into a subtle link, only shows when non-default */}
@@ -2873,7 +2802,7 @@ function MapToolbar({ mapRef }) {
   };
 
   return (
-    <div style={{ width: 44, height: "100%", display: "flex", flexDirection: "column", alignItems: "center", background: t.glassBg, border: `1px solid ${t.glassBorder}`, borderRadius: sp.xs, boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)", boxSizing: "border-box", position: "relative", overflow: "hidden" }}>
+    <div style={{ width: 44, height: "100%", display: "flex", flexDirection: "column", alignItems: "center", background: "transparent", boxSizing: "border-box", position: "relative", overflow: "hidden" }}>
 
       {/* ── Top group ── */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: sp.xs }}>
@@ -3113,11 +3042,11 @@ const DEVICE_MARKERS = [
   { id: "DEV-012", lng: -74.0071, lat: 40.7445, color: "#4A9EFF" },
 ];
 
-function MapPlaceholder({ sources, filteredCounts, baseMap, customStyleUrl, heatmapEnabled, drawerOpen, onDeviceClick, onMapReady }) {
+function MapPlaceholder({ sources, filteredCounts, baseMap, heatmapEnabled, drawerOpen, onDeviceClick, onMapReady }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
-  const styleUrl = (customStyleUrl && customStyleUrl.startsWith("mapbox://styles/")) ? customStyleUrl : (MAPBOX_STYLES[baseMap] || MAPBOX_STYLES.darkmatter);
+  const styleUrl = MAPBOX_STYLES[baseMap] || MAPBOX_STYLES.darkmatter;
 
   // Deactivate all markers when drawer closes from outside
   useEffect(() => {
@@ -3210,8 +3139,7 @@ function MapPlaceholder({ sources, filteredCounts, baseMap, customStyleUrl, heat
 /* ══════════════════════════════════════════════════════════════
    SAVE MODAL
    ══════════════════════════════════════════════════════════════ */
-function SaveModal({ queryName, sources, groups, totalConditions, baseMap, onClose, onSave }) {
-  const [draftName, setDraftName] = useState(queryName);
+function SaveModal({ queryName, sources, groups, totalConditions, baseMap, onClose }) {
   const [systemOptIns, setSystemOptIns] = useState({});
   const userSources = sources.filter((s) => s.visible && !s.system);
   const systemSources = sources.filter((s) => s.system);
@@ -3220,18 +3148,7 @@ function SaveModal({ queryName, sources, groups, totalConditions, baseMap, onClo
     <div onClick={onClose} role="dialog" aria-modal="true" aria-label="Save Query" style={{ position: "fixed", inset: 0, background: t.overlayDark, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(4px)" }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: 460, background: t.bgRaised, border: `1px solid ${t.borderLight}`, borderRadius: sp.sm, padding: sp.xl, maxHeight: "80vh", overflowY: "auto" }}>
         <div style={{ ...type.heading, marginBottom: sp.xs, color: t.textPrimary }}>Save Query</div>
-        <div style={{ marginBottom: sp.xl }}>
-          <FieldLabel>Query name</FieldLabel>
-          <input
-            autoFocus
-            value={draftName}
-            onChange={(e) => setDraftName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && draftName.trim() && onSave(draftName.trim())}
-            style={{ width: "100%", padding: `${sp.sm}px ${sp.md}px`, ...type.body, borderRadius: sp.xs, border: `1px solid ${t.borderSubtle}`, background: t.bgField, color: t.textPrimary, outline: "none", boxSizing: "border-box", transition: "border-color 0.15s" }}
-            onFocus={(e) => (e.currentTarget.style.borderColor = t.yellow500)}
-            onBlur={(e) => (e.currentTarget.style.borderColor = t.borderSubtle)}
-          />
-        </div>
+        <div style={{ ...type.body, color: t.textSecondary, marginBottom: sp.xl }}>Review what will be included in &ldquo;{queryName}&rdquo;</div>
 
         {/* Included */}
         <FieldLabel>Included</FieldLabel>
@@ -3281,67 +3198,11 @@ function SaveModal({ queryName, sources, groups, totalConditions, baseMap, onClo
           >
             Cancel
           </button>
-          <button onClick={() => draftName.trim() && onSave(draftName.trim())} disabled={!draftName.trim()} style={{ padding: `${sp.sm}px ${sp.xl}px`, ...type.body, fontWeight: 600, borderRadius: sp.xs, border: "none", background: draftName.trim() ? t.yellow500 : t.borderLight, color: draftName.trim() ? t.textInverse : t.textSubtle, cursor: draftName.trim() ? "pointer" : "default", outline: "none" }}
+          <button onClick={onClose} style={{ padding: `${sp.sm}px ${sp.xl}px`, ...type.body, fontWeight: 600, borderRadius: sp.xs, border: "none", background: t.yellow500, color: t.textInverse, cursor: "pointer", outline: "none" }}
             onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
             onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
           >
             Save Query
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════════
-   SHARE MODAL
-   ══════════════════════════════════════════════════════════════ */
-function ShareModal({ queryName, sources, groups, totalConditions, baseMap, onClose }) {
-  const [copied, setCopied] = useState(false);
-  const userSources = sources.filter((s) => s.visible && !s.system);
-
-  const copyLink = () => {
-    const stub = `${window.location.origin}${window.location.pathname}?q=${encodeURIComponent(queryName)}`;
-    navigator.clipboard?.writeText(stub).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div onClick={onClose} role="dialog" aria-modal="true" aria-label="Share Query" style={{ position: "fixed", inset: 0, background: t.overlayDark, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(4px)" }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 460, background: t.bgRaised, border: `1px solid ${t.borderLight}`, borderRadius: sp.sm, padding: sp.xl, maxHeight: "80vh", overflowY: "auto" }}>
-        <div style={{ ...type.heading, marginBottom: sp.xs, color: t.textPrimary }}>Share Query</div>
-        <div style={{ ...type.body, color: t.textSecondary, marginBottom: sp.xl }}>This link shares your query configuration — not device data.</div>
-
-        {/* What's included */}
-        <FieldLabel>What's included in the link</FieldLabel>
-        <div style={{ marginBottom: sp.xl }}>
-          <IncRow label="Query name" value={queryName} />
-          <IncRow label="Data sources" value={userSources.map((s) => s.name).join(", ") || "None"} />
-          <IncRow label="Conditions" value={`${totalConditions} condition${totalConditions !== 1 ? "s" : ""} across ${groups.length} group${groups.length !== 1 ? "s" : ""}`} />
-          <IncRow label="Map settings" value={`${baseMap} base map`} />
-        </div>
-
-        {/* Disclosure */}
-        <div style={{ display: "flex", alignItems: "flex-start", gap: sp.sm, padding: sp.md, borderRadius: sp.xs, background: t.bgField, border: `1px solid ${t.borderDark}`, marginBottom: sp.xl }}>
-          <ShieldAlert size={14} color={t.textSubtle} style={{ flexShrink: 0, marginTop: 1 }} />
-          <span style={{ ...type.secondary, color: t.textSubtle, lineHeight: 1.5 }}>
-            Sharing creates a read-only link. <strong style={{ color: t.textSecondary }}>No raw device data is transmitted</strong> — only query parameters and map configuration.
-          </span>
-        </div>
-
-        {/* Actions */}
-        <div style={{ display: "flex", gap: sp.sm, justifyContent: "flex-end" }}>
-          <button onClick={onClose} style={{ padding: `${sp.sm}px ${sp.lg}px`, ...type.body, borderRadius: sp.xs, border: `1px solid ${t.borderLight}`, background: "transparent", color: t.textSecondary, cursor: "pointer", outline: "none" }}
-            onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-            onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-          >Cancel</button>
-          <button onClick={copyLink} style={{ display: "flex", alignItems: "center", gap: sp.sm, padding: `${sp.sm}px ${sp.xl}px`, ...type.body, fontWeight: 600, borderRadius: sp.xs, border: "none", background: copied ? t.feedbackSuccess : t.yellow500, color: t.textInverse, cursor: "pointer", outline: "none", transition: "background 0.2s" }}
-            onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-            onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-          >
-            {copied ? <CheckCircle2 size={14} /> : <Link size={14} />}
-            {copied ? "Copied!" : "Copy Link"}
           </button>
         </div>
       </div>
