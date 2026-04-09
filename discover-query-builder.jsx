@@ -436,6 +436,20 @@ function getOperatorsForField(field) {
 function readBack(c) {
   if (!c.field || !c.operator) return "Incomplete condition";
   const val = c.value || "…";
+
+  // Date field operators — format the stored value nicely
+  if (DATE_FIELDS.includes(c.field)) {
+    if (c.operator === "last N days") {
+      const n = parseInt(val, 10);
+      return `${c.field} in the last ${isNaN(n) ? val : n} day${n !== 1 ? "s" : ""}`;
+    }
+    if (c.operator === "between") {
+      return `${c.field} between ${val}`;
+    }
+    // before / after — strip T separator for display
+    return `${c.field} ${c.operator} ${val.replace("T", " ")}`;
+  }
+
   if (c.scope === "time" && c.operator === "between") return `${c.field} between ${val}`;
   if (c.scope === "spatial" && c.operator === "within") return `${c.field} within ${val}`;
   if (c.scope === "spatial" && c.operator === "within radius of") return `Within ${val} of ${c.field}`;
@@ -483,7 +497,7 @@ export default function DiscoverQueryBuilder() {
       logic: "AND",
       conditions: [
         { id: 1, scope: "spatial", field: "Area of Interest", operator: "within", value: "Downtown Sector 4", sourceScope: "all" },
-        { id: 2, scope: "time", field: "Timestamp", operator: "between", value: "Mar 1 – Mar 7", sourceScope: "all" },
+        { id: 2, scope: "time", field: "Timestamp", operator: "between", value: "2026-03-01 – 2026-03-07", sourceScope: "all" },
         { id: 3, scope: "attribute", field: "Device Type", operator: "equals", value: "Mobile", sourceScope: "ds1" },
       ],
     },
@@ -651,7 +665,7 @@ export default function DiscoverQueryBuilder() {
 
   const pickScope = (v) => { setNewCondition((p) => ({ ...p, scope: v, field: "", operator: "", value: "" })); setAddStep(1); };
   const pickField = (v) => { setNewCondition((p) => ({ ...p, field: v, operator: "", value: "" })); setAddStep(2); };
-  const pickOp = (v) => { setNewCondition((p) => ({ ...p, operator: v })); setAddStep(3); };
+  const pickOp = (v) => { setNewCondition((p) => ({ ...p, operator: v, value: "" })); setAddStep(3); };
   const goBack = () => {
     if (addStep === 1) { setNewCondition((p) => ({ ...p, scope: "", field: "", operator: "", value: "" })); setAddStep(0); }
     else if (addStep === 2) { setNewCondition((p) => ({ ...p, field: "", operator: "", value: "" })); setAddStep(1); }
@@ -1964,6 +1978,221 @@ function ConditionRow({ condition, sources, onRemove }) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   DATE / TIME VALUE INPUT — used in AddFlow step 3 for date fields
+   ══════════════════════════════════════════════════════════════ */
+function dtInputStyle(focused) {
+  return {
+    flex: 1, padding: `${sp.sm}px ${sp.md}px`, ...type.body, fontSize: 12,
+    borderRadius: sp.xs + 2, border: `1px solid ${focused ? t.yellow500 : t.borderSubtle}`,
+    background: t.bgField, color: t.textPrimary, outline: "none",
+    transition: "border-color 0.15s", width: "100%", boxSizing: "border-box",
+    WebkitAppearance: "none", colorScheme: "dark",
+  };
+}
+
+function DTFieldLabel({ children }) {
+  return (
+    <span style={{ ...type.caption, fontSize: 10, color: t.textSubtle, letterSpacing: "0.04em" }}>
+      {children}
+    </span>
+  );
+}
+
+function DTConfirmButton({ disabled, onClick }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-disabled={disabled}
+      style={{
+        padding: `${sp.sm}px ${sp.xl}px`, ...type.body, fontSize: 12, fontWeight: 600,
+        borderRadius: sp.xs + 2, border: "none",
+        background: disabled ? t.borderLight : t.yellow500,
+        color:      disabled ? t.textSubtle  : t.textInverse,
+        cursor:     disabled ? "not-allowed" : "pointer",
+        outline: "none", boxShadow: focused ? focusRing : "none",
+        transition: "background 0.15s", flexShrink: 0, whiteSpace: "nowrap",
+      }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    >
+      Add filter
+    </button>
+  );
+}
+
+function DTSingleInput({ label, dateValue, timeValue, onDateChange, onTimeChange, autoFocus }) {
+  const [dateFocused, setDateFocused] = useState(false);
+  const [timeFocused, setTimeFocused] = useState(false);
+  const dateRef = useRef(null);
+  useEffect(() => { if (autoFocus && dateRef.current) dateRef.current.focus(); }, [autoFocus]);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: sp.xs, flex: 1 }}>
+      {label && <DTFieldLabel>{label}</DTFieldLabel>}
+      <div style={{ display: "flex", gap: sp.sm }}>
+        <div style={{ flex: 2 }}>
+          <input ref={dateRef} type="date" value={dateValue}
+            onChange={(e) => onDateChange(e.target.value)}
+            aria-label={label ? `${label} date` : "Date"}
+            style={dtInputStyle(dateFocused)}
+            onFocus={() => setDateFocused(true)} onBlur={() => setDateFocused(false)} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <input type="time" value={timeValue}
+            onChange={(e) => onTimeChange(e.target.value)}
+            aria-label={label ? `${label} time` : "Time"}
+            style={dtInputStyle(timeFocused)}
+            onFocus={() => setTimeFocused(true)} onBlur={() => setTimeFocused(false)} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NDaysStepper({ value, onChange }) {
+  const n = parseInt(value, 10) || 7;
+  const [focused, setFocused] = useState(false);
+  const presets = [1, 7, 14, 30, 90];
+  const btnStyle = {
+    width: 32, height: 32, borderRadius: sp.xs, border: `1px solid ${t.borderSubtle}`,
+    background: t.bgField, color: t.textPrimary, fontSize: 16, lineHeight: 1,
+    cursor: "pointer", outline: "none", display: "flex", alignItems: "center", justifyContent: "center",
+    transition: "border-color 0.15s, background 0.15s",
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
+      <div style={{ display: "flex", alignItems: "center", gap: sp.sm }}>
+        <button onClick={() => onChange(String(Math.max(1, n - 1)))} aria-label="Decrease days" style={btnStyle}
+          onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; e.currentTarget.style.borderColor = t.borderMuted; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = t.bgField;  e.currentTarget.style.borderColor = t.borderSubtle; }}
+          onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
+          onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}>−</button>
+        <div style={{ flex: 1, position: "relative" }}>
+          <input type="number" min={1} max={365} value={n}
+            onChange={(e) => onChange(e.target.value)} aria-label="Number of days"
+            style={{ ...dtInputStyle(focused), textAlign: "center", fontWeight: 600, paddingRight: 40 }}
+            onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+          <span style={{ position: "absolute", right: sp.md, top: "50%", transform: "translateY(-50%)",
+            ...type.secondary, color: t.textSubtle, pointerEvents: "none" }}>days</span>
+        </div>
+        <button onClick={() => onChange(String(Math.min(365, n + 1)))} aria-label="Increase days" style={btnStyle}
+          onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; e.currentTarget.style.borderColor = t.borderMuted; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = t.bgField;  e.currentTarget.style.borderColor = t.borderSubtle; }}
+          onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
+          onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}>+</button>
+      </div>
+      <div style={{ display: "flex", gap: sp.xs, flexWrap: "wrap" }}>
+        {presets.map((p) => (
+          <button key={p} onClick={() => onChange(String(p))} aria-pressed={n === p}
+            style={{
+              padding: `${sp.xs}px ${sp.sm + 2}px`, ...type.caption, borderRadius: sp.xs + 2,
+              border: `1px solid ${n === p ? t.yellow500 : t.borderDark}`,
+              background: n === p ? t.yellow950 : t.bgField,
+              color: n === p ? t.textHighlighted : t.textSubtle,
+              cursor: "pointer", outline: "none", transition: "border-color 0.15s, background 0.15s, color 0.15s",
+            }}
+            onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
+            onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}>
+            {p === 1 ? "Today" : `${p}d`}
+          </button>
+        ))}
+      </div>
+      <span style={{ ...type.caption, color: t.textSubtle }}>
+        Matches records from the last {n} day{n !== 1 ? "s" : ""} up to now
+      </span>
+    </div>
+  );
+}
+
+function DateTimeValueInput({ operator, value, onChange, onConfirm }) {
+  const parseInitial = () => {
+    if (operator === "between") {
+      const parts = (value || "").split(" \u2013 ");
+      const [d1, t1] = (parts[0] || "").split("T");
+      const [d2, t2] = (parts[1] || "").split("T");
+      return { date1: d1 || "", time1: t1 || "", date2: d2 || "", time2: t2 || "" };
+    }
+    if (operator === "last N days") return { n: value || "7" };
+    const [d, tm] = (value || "").split("T");
+    return { date1: d || "", time1: tm || "" };
+  };
+  const [local, setLocal] = useState(parseInitial);
+  const patch = (key, val) => setLocal((prev) => ({ ...prev, [key]: val }));
+
+  useEffect(() => {
+    let next = "";
+    if (operator === "before" || operator === "after") {
+      next = local.date1 ? (local.time1 ? `${local.date1}T${local.time1}` : local.date1) : "";
+    } else if (operator === "between") {
+      const start = local.date1 ? (local.time1 ? `${local.date1}T${local.time1}` : local.date1) : "";
+      const end   = local.date2 ? (local.time2 ? `${local.date2}T${local.time2}` : local.date2) : "";
+      next = start && end ? `${start} \u2013 ${end}` : "";
+    } else if (operator === "last N days") {
+      next = local.n || "";
+    }
+    onChange(next);
+  }, [local, operator]);
+
+  const isValid = (() => {
+    if (operator === "before" || operator === "after") return !!local.date1;
+    if (operator === "between") return !!local.date1 && !!local.date2;
+    if (operator === "last N days") return parseInt(local.n, 10) > 0;
+    return false;
+  })();
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: sp.md }}
+      onKeyDown={(e) => { if (e.key === "Enter" && isValid) onConfirm(); }}>
+
+      {(operator === "before" || operator === "after") && (
+        <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
+          <div style={{ display: "flex", alignItems: "center", gap: sp.xs, ...type.secondary, color: t.textSubtle }}>
+            <CalendarDays size={12} />
+            <span>Pick a date &amp; time</span>
+          </div>
+          <DTSingleInput
+            dateValue={local.date1} timeValue={local.time1}
+            onDateChange={(v) => patch("date1", v)} onTimeChange={(v) => patch("time1", v)}
+            autoFocus />
+        </div>
+      )}
+
+      {operator === "between" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
+          <div style={{ display: "flex", alignItems: "center", gap: sp.xs, ...type.secondary, color: t.textSubtle }}>
+            <CalendarDays size={12} />
+            <span>Select a date range</span>
+          </div>
+          <DTSingleInput label="From"
+            dateValue={local.date1} timeValue={local.time1}
+            onDateChange={(v) => patch("date1", v)} onTimeChange={(v) => patch("time1", v)}
+            autoFocus />
+          <DTSingleInput label="To"
+            dateValue={local.date2} timeValue={local.time2}
+            onDateChange={(v) => patch("date2", v)} onTimeChange={(v) => patch("time2", v)} />
+        </div>
+      )}
+
+      {operator === "last N days" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
+          <div style={{ display: "flex", alignItems: "center", gap: sp.xs, ...type.secondary, color: t.textSubtle }}>
+            <Clock size={12} />
+            <span>How many days back?</span>
+          </div>
+          <NDaysStepper value={local.n} onChange={(v) => patch("n", v)} />
+        </div>
+      )}
+
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <DTConfirmButton disabled={!isValid} onClick={onConfirm} />
+      </div>
+      <span style={{ ...type.caption, color: t.textSubtle }}>Press Enter to confirm</span>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
    ADD CONDITION FLOW — GAP 1: source scope selector
    ══════════════════════════════════════════════════════════════ */
 function AddFlow({ step, nc, sources, onPickScope, onPickField, onPickOp, onConfirm, onCancel, onValueChange, onSourceScopeChange, onBack }) {
@@ -2088,41 +2317,53 @@ function AddFlow({ step, nc, sources, onPickScope, onPickField, onPickOp, onConf
 
       {/* ─── Step 3: Value input ─── */}
       {step === 3 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
-          <div style={{ display: "flex", gap: sp.sm, alignItems: "stretch" }}>
-            <input
-              autoFocus
+        DATE_FIELDS.includes(nc.field)
+          ? (
+            <DateTimeValueInput
+              key={nc.operator}
+              operator={nc.operator}
               value={nc.value}
-              onChange={(e) => onValueChange(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && nc.value && onConfirm()}
-              placeholder={nc.scope === "spatial" ? "e.g. Downtown Sector 4" : nc.scope === "time" ? "e.g. Mar 1 – Mar 7" : "Enter value\u2026"}
-              style={{
-                flex: 1, padding: `${sp.sm}px ${sp.md}px`, ...type.body, fontSize: 12,
-                borderRadius: sp.sm, border: `1px solid ${t.borderSubtle}`, background: t.bgField,
-                color: t.textPrimary, outline: "none", transition: "border-color 0.15s",
-              }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = t.yellow500)}
-              onBlur={(e) => (e.currentTarget.style.borderColor = t.borderSubtle)}
+              onChange={onValueChange}
+              onConfirm={onConfirm}
             />
-            <button
-              onClick={onConfirm}
-              disabled={!nc.value}
-              style={{
-                padding: `${sp.sm}px ${sp.xl}px`, ...type.body, fontSize: 12, fontWeight: 600,
-                borderRadius: sp.sm, border: "none",
-                background: nc.value ? t.yellow500 : t.borderLight,
-                color: nc.value ? t.textInverse : t.textSubtle,
-                cursor: nc.value ? "pointer" : "not-allowed", outline: "none",
-                transition: "background 0.15s, transform 0.1s",
-              }}
-              onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-              onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-            >
-              Add filter
-            </button>
-          </div>
-          <span style={{ ...type.secondary, fontSize: 10, color: t.textSubtle }}>Press Enter to confirm</span>
-        </div>
+          )
+          : (
+            <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
+              <div style={{ display: "flex", gap: sp.sm, alignItems: "stretch" }}>
+                <input
+                  autoFocus
+                  value={nc.value}
+                  onChange={(e) => onValueChange(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && nc.value && onConfirm()}
+                  placeholder={nc.scope === "spatial" ? "e.g. Downtown Sector 4" : "Enter value\u2026"}
+                  style={{
+                    flex: 1, padding: `${sp.sm}px ${sp.md}px`, ...type.body, fontSize: 12,
+                    borderRadius: sp.sm, border: `1px solid ${t.borderSubtle}`, background: t.bgField,
+                    color: t.textPrimary, outline: "none", transition: "border-color 0.15s",
+                  }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = t.yellow500)}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = t.borderSubtle)}
+                />
+                <button
+                  onClick={onConfirm}
+                  disabled={!nc.value}
+                  style={{
+                    padding: `${sp.sm}px ${sp.xl}px`, ...type.body, fontSize: 12, fontWeight: 600,
+                    borderRadius: sp.sm, border: "none",
+                    background: nc.value ? t.yellow500 : t.borderLight,
+                    color: nc.value ? t.textInverse : t.textSubtle,
+                    cursor: nc.value ? "pointer" : "not-allowed", outline: "none",
+                    transition: "background 0.15s, transform 0.1s",
+                  }}
+                  onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
+                  onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
+                >
+                  Add filter
+                </button>
+              </div>
+              <span style={{ ...type.secondary, fontSize: 10, color: t.textSubtle }}>Press Enter to confirm</span>
+            </div>
+          )
       )}
 
       {/* Source scope — collapsed into a subtle link, only shows when non-default */}
