@@ -25,8 +25,6 @@ import {
   Database,
   Sliders,
   FolderOpen,
-  PanelLeftClose,
-  PanelLeftOpen,
   Edit3,
   ArrowUp,
   ArrowDown,
@@ -611,7 +609,6 @@ export default function DiscoverQueryBuilder() {
   }, [sources]);
 
   const filteredCounts = useMemo(() => simulateFilteredCount(baseCounts, appliedGroups), [baseCounts, appliedGroups]);
-  const hasPending = groups !== appliedGroups;
 
   const totalRecords = useMemo(() => Object.values(filteredCounts).reduce((s, n) => s + n, 0), [filteredCounts]);
 
@@ -826,7 +823,8 @@ export default function DiscoverQueryBuilder() {
           }
         }
       `}</style>
-      {/* ═══ SIDEBAR ═══ — always rendered, animated via transform */}
+      {/* ═══ SIDEBAR ═══ — disabled until prompted; wrap in {SHOW_SIDEBAR && (...)} to re-enable */}
+      {false && (<>
       {/* Collapsed expand button — fades in/out */}
       <button
         onClick={() => setPanelCollapsed(false)}
@@ -855,13 +853,13 @@ export default function DiscoverQueryBuilder() {
           pointerEvents: panelCollapsed ? "auto" : "none",
           transition: prefersReduced ? "none" : `opacity ${motion.medium} ${motion.easeOut}, transform ${motion.medium} ${motion.easeOut}`,
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(24, 24, 24, 0.7)")}
+        onMouseEnter={(e) => (e.currentTarget.style.background = t.bgHover)}
         onMouseLeave={(e) => (e.currentTarget.style.background = t.glassBg)}
         onMouseDown={(e) => (e.currentTarget.dataset.mousedown = "1")}
         onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
         onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
       >
-        <PanelLeftOpen size={18} color={t.yellow500} />
+        <ChevronRight size={14} color={t.textSecondary} />
       </button>
 
       {/* Panel — slides + fades */}
@@ -912,7 +910,6 @@ export default function DiscoverQueryBuilder() {
               {/* Section buttons */}
               {[
                 { key: "sources", icon: Layers, label: "Data Sources & Layers", count: sources.filter((s) => s.visible).length },
-                { key: "conditions", icon: Filter, label: "Conditions", count: totalConditions },
                 { key: "tooltip", icon: MessageSquareText, label: "Tooltip Fields", count: totalTooltipFields || undefined },
                 { key: "mapSettings", icon: Map, label: "Map Settings" },
               ].map((sec) => {
@@ -927,27 +924,27 @@ export default function DiscoverQueryBuilder() {
                     aria-pressed={isActive}
                     style={{
                       width: 44, height: 44, padding: 0,
-                      background: isActive ? t.bgField : "transparent",
+                      background: isActive ? t.bgHover : "transparent",
                       border: "none",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       cursor: "pointer", outline: "none", position: "relative",
                       transition: "background 0.12s, color 0.12s",
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.querySelector("svg").style.color = isActive ? t.textPrimary : t.textSecondary; }}
-                    onMouseLeave={(e) => { e.currentTarget.querySelector("svg").style.color = isActive ? t.textPrimary : t.textSubtle; }}
+                    onMouseEnter={(e) => { e.currentTarget.querySelector("svg").style.color = isActive ? t.textSecondary : t.textSecondary; }}
+                    onMouseLeave={(e) => { e.currentTarget.querySelector("svg").style.color = isActive ? t.textSecondary : t.textSubtle; }}
                     onMouseDown={(e) => (e.currentTarget.dataset.mousedown = "1")}
                     onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
                     onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
                   >
-                    <I size={16} color={isActive ? t.textPrimary : t.textSubtle} />
+                    <I size={14} color={isActive ? t.textSecondary : t.textSubtle} />
                     {sec.count !== undefined && sec.count > 0 && (
                       <span style={{
-                        position: "absolute", top: 5, right: 5,
-                        fontSize: 8, fontWeight: 700,
+                        position: "absolute", top: 3, right: 4,
+                        fontSize: 7, fontWeight: 700,
                         color: t.textInverse, background: t.textSecondary,
-                        borderRadius: 6, minWidth: 14, height: 14,
+                        borderRadius: 5, minWidth: 12, height: 12,
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        padding: `0 ${sp.xs - 1}px`, lineHeight: 1,
+                        padding: `0 2px`, lineHeight: 1,
                       }}>
                         {sec.count}
                       </span>
@@ -1034,76 +1031,6 @@ export default function DiscoverQueryBuilder() {
               )}
 
               {/* CONDITIONS */}
-              {activeSection === "conditions" && (
-                <div style={{ padding: sp.md, animation: `sectionFadeIn ${motion.fast} ${motion.easeOut} both` }}>
-                  <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: t.textSubtle, marginBottom: sp.sm }}>CONDITIONS</div>
-                  {groups.map((group, gi) => (
-                    <div key={group.id}>
-                      {gi > 0 && <InterGroupLabel />}
-                      <ConditionGroup
-                        group={{ ...group, collapsed: collapseState[group.id] ?? false }}
-                        groupIndex={gi}
-                        groupCount={groups.length}
-                        sources={sources}
-                        canRemove={groups.length > 1}
-                        onToggleLogic={() => toggleGroupLogic(group.id)}
-                        onRemoveCondition={(cid) => removeCondition(group.id, cid)}
-                        onAddCondition={() => startAdd(group.id)}
-                        onRemoveGroup={() => removeGroup(group.id)}
-                        onRename={(name) => renameGroup(group.id, name)}
-                        onMoveUp={() => moveGroup(group.id, "up")}
-                        onMoveDown={() => moveGroup(group.id, "down")}
-                        onAssignSource={(sid) => assignSource(group.id, sid)}
-                        onCollapse={() => collapseGroup(group.id)}
-                        isAdding={addingToGroup === group.id}
-                        addStep={addStep}
-                        newCondition={newCondition}
-                        onPickScope={pickScope}
-                        onPickField={pickField}
-                        onPickOp={pickOp}
-                        onConfirm={confirmAdd}
-                        onCancel={cancelAdd}
-                        onBack={goBack}
-                        onValueChange={(v) => setNewCondition((p) => ({ ...p, value: v }))}
-                        onAssignSource={(sid) => assignSource(group.id, sid)}
-                      />
-                    </div>
-                  ))}
-                  <button
-                    onClick={addGroup}
-                    style={{ ...addBtnStyle, marginTop: sp.sm }}
-                    onMouseEnter={addBtnHover} onMouseLeave={addBtnLeave}
-                    onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-                    onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-                  >
-                    <Plus size={11} /> Add Group
-                  </button>
-
-                  {/* Execute Query */}
-                  <button
-                    onClick={() => setAppliedGroups(groups)}
-                    style={{
-                      marginTop: sp.md, width: "100%", padding: `${sp.sm + 2}px ${sp.md}px`,
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: sp.sm,
-                      borderRadius: sp.sm, border: `1px solid ${hasPending ? t.yellow500 : t.borderDark}`,
-                      cursor: "pointer", outline: "none",
-                      background: hasPending ? t.yellow500 : t.bgField,
-                      color: hasPending ? t.textInverse : t.textSubtle,
-                      fontWeight: 600, ...type.body, fontSize: 12,
-                      transition: "background 0.2s, color 0.2s, border-color 0.2s",
-                      boxSizing: "border-box",
-                    }}
-                    onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-                    onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-                  >
-                    {hasPending && (
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: t.textInverse, flexShrink: 0 }} />
-                    )}
-                    Execute Query
-                  </button>
-                </div>
-              )}
-
               {/* TOOLTIP CUSTOMIZATION */}
               {activeSection === "tooltip" && (
                 <div style={{ padding: sp.md, animation: `sectionFadeIn ${motion.fast} ${motion.easeOut} both` }}>
@@ -1165,6 +1092,7 @@ export default function DiscoverQueryBuilder() {
             </div>
           </div>
         </div>
+      </>)}
 
       {/* ═══ MAP AREA ═══ */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
@@ -1273,7 +1201,7 @@ function QueryBar({ queryName, setQueryName, isEditingName, setIsEditingName, on
   const startEditing = () => { setDraftName(queryName); setIsEditingName(true); };
 
   return (
-    <div style={{ flexShrink: 0, background: t.bgBase, borderBottom: `1px solid ${t.borderDark}`, minHeight: 44, boxSizing: "border-box", display: "flex", alignItems: "stretch" }}>
+    <div style={{ flexShrink: 0, background: t.bgBase, minHeight: 44, boxSizing: "border-box", display: "flex", alignItems: "stretch" }}>
 
         {/* Collapse — matches rail buttons exactly */}
         <button
@@ -1286,7 +1214,7 @@ function QueryBar({ queryName, setQueryName, isEditingName, setIsEditingName, on
           onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
           onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
         >
-          <PanelLeftClose size={16} color={t.textSubtle} />
+          <ChevronLeft size={14} color={t.textSubtle} />
         </button>
 
       <div style={{ display: "flex", alignItems: "center", gap: sp.sm, flex: 1, padding: `0 ${sp.md}px` }}>
@@ -1303,7 +1231,7 @@ function QueryBar({ queryName, setQueryName, isEditingName, setIsEditingName, on
               flex: 1, minWidth: 0,
               background: "transparent",
               border: "none",
-              borderBottom: `1px solid ${isDirty ? t.yellow500 : t.borderDark}`,
+              borderBottom: `1px solid ${t.textPrimary}`,
               borderRadius: 0,
               padding: `${sp.xs}px 2px`,
               marginBottom: -1,
@@ -2184,7 +2112,7 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
   const handleLoad = (q) => { onLoad(q); onShowLoadToggle(); };
 
   const canSearch = activeQuery && activeQuery.conditions.length > 0 && activeQuery.conditions.every((c) => c.field && c.operator && c.value);
-  const panelLeft = panelCollapsed ? sp.sm : 320 + sp.sm + sp.sm;
+  const panelLeft = sp.sm;
   const panelWidth = "min(320px, calc(100vw - 16px))";
 
   /* ── Trigger button (closed) — matches top-left collapsed icon ── */
@@ -2201,7 +2129,7 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
           background: t.glassBg,
           display: "flex", alignItems: "center", justifyContent: "center",
           cursor: "pointer", outline: "none",
-          transition: `left ${motion.slow} ${motion.easeOut}, opacity ${motion.medium} ${motion.easeOut}, transform ${motion.medium} ${motion.easeOut}, background ${motion.fast}`,
+          transition: `opacity ${motion.medium} ${motion.easeOut}, transform ${motion.medium} ${motion.easeOut}, background ${motion.fast}`,
         }}
         onMouseEnter={(e) => (e.currentTarget.style.background = t.bgHover)}
         onMouseLeave={(e) => (e.currentTarget.style.background = t.glassBg)}
@@ -2278,8 +2206,8 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
       display: "flex", flexDirection: "row", overflow: "hidden",
       willChange: "width",
       transition: collapsed
-        ? `left ${motion.slow} ${motion.easeOutExpo}, width ${motion.medium} ${motion.easeOutExpo}, max-height ${motion.medium} ${motion.easeOutExpo}, box-shadow ${motion.medium} ${motion.easeOut}`
-        : `left ${motion.slow} ${motion.easeOutExpo}, width ${motion.slow} ${motion.easeOutExpo}, max-height ${motion.slow} ${motion.easeOutExpo} 80ms, box-shadow ${motion.slow} ${motion.easeOut}`,
+        ? `width ${motion.medium} ${motion.easeOutExpo}, max-height ${motion.medium} ${motion.easeOutExpo}, box-shadow ${motion.medium} ${motion.easeOut}`
+        : `width ${motion.slow} ${motion.easeOutExpo}, max-height ${motion.slow} ${motion.easeOutExpo} 80ms, box-shadow ${motion.slow} ${motion.easeOut}`,
     }}>
       {/* ── Rail ── */}
       <div style={{
@@ -2289,7 +2217,7 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
       }}>
         {/* Persistent query icon — top of rail */}
         <div aria-hidden="true" style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, borderBottom: `1px solid ${t.borderDark}` }}>
-          <Database size={16} color={t.textSecondary} />
+          <Database size={12} color={t.borderSubtle} />
         </div>
 
         {/* Query tabs */}
@@ -3691,7 +3619,7 @@ function DevicePanel({ device, onClose }) {
           onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
           onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
         >
-          <PanelLeftClose size={16} color={t.textSubtle} />
+          <ChevronLeft size={14} color={t.textSubtle} />
         </button>
 
         {/* Title + close action — same flex row as QueryBar's name+icons slot */}

@@ -32,3 +32,51 @@ All values from the `t.*` system (Arkem Design Tokens). Never hard-code colors. 
 - Neon accents, gradient text, glassmorphism
 - Generic card grids or hero metric layouts
 - Native `appearance: auto` on selects (produces inconsistent chevrons)
+
+---
+
+## Bottom-Left Panel (BottomQueryBuilder) — Spec
+
+### Role
+The **primary query builder**. The top-left Conditions tab has been removed. This floating panel is the sole place for building and running queries.
+
+### Positioning & Surface
+- `position: absolute`, `bottom: sp.sm`, `left: panelLeft` (tracks top-left panel collapse: `panelCollapsed ? sp.sm : 320 + sp.sm + sp.sm`)
+- Open width: `min(320px, calc(100vw - 16px))`. Collapsed: `44px` (rail only). Max height: `460px`.
+- Panel surface: `glassBg` / `glassBorder` — intentional. Glass signals floating overlay vs. docked panel.
+- Rail surface: solid `bgBase` — structural spine.
+- `willChange: width` on container.
+
+### Rail (44px wide, `bgBase`)
+- **Database icon** (top): 44×44, `textSecondary`, `borderBottom: borderDark`, decorative
+- **Query tabs** (Q1…Q5): 44×44. Active: `bgHover` bg, `textPrimary`, `fontWeight: 600`. Inactive: transparent, `textSubtle`, `fontWeight: 500`.
+- **Condition count badge**: `top: 3, right: 4`, `7px` font, `bg: textSecondary`, `color: textInverse`, `12px` tall
+- **Rail delete X**: 18×18, `bg: t.danger`, hover-reveal (opacity 0→1), top-right corner. **Instant delete — no confirmation dialog.**
+- **Divider**: `width: 24, height: 1, background: borderDark`
+- **New Query** / **Load** / **Collapse** buttons: 44×44 each, at rail bottom
+
+### Header (Content Area, `bgBase`)
+- `minHeight: 44`, `paddingBottom: sp.sm`, no `borderBottom`
+- **Row 1** (`padding: 0 sp.sm`): Query name (click-to-rename, `type.subheading`) + Save + Reset + Delete icons
+  - Rename input: `borderBottom: 1px solid textPrimary`, no outer border
+  - Save/Reset: disabled at `opacity: 0.3` + `disabled` attr. Delete: always enabled, `Trash2 color={t.danger}`, triggers confirmation bar.
+- **Row 2** (`padding: 0 sp.sm`, `marginTop: sp.xs`): Source select (borderless pill, `bgField`, custom chevron) + AND/OR toggle (`width: 72`)
+
+### Confirmation Bar (inline, `sectionFadeIn`)
+- **Reset**: `bg: bgRaised`, `border: borderMuted`, text `textPrimary`, confirm `bg: textSecondary`
+- **Delete**: `bg: danger+"18"`, `border: danger+"40"`, text `danger`, confirm `bg: danger, color: "#fff"`
+
+### Condition Area
+- Condition card: `bg: bgField`, `border: borderDark`, `borderRadius: sp.xs`, `padding: sp.sm`
+  - Row 1: Field select + remove X (`28×28` min). Row 2: Operator + Value.
+  - Link label between cards: `8px`, `fontWeight: 600`, `color: borderSubtle`, centered
+  - Disabled inputs: `opacity: 0.4`
+- **+ Condition**: dashed `borderMuted`, `minHeight: 36`. Hover: `bgHover` bg, `textPrimary`, `borderSubtle`
+
+### Footer (`borderTop: borderDark`, `padding: sp.sm`)
+- **Spatial toggle**: pill `bg: bgField`, `border: borderDark`, `padding: 2`. Active option: `bgRaised`, `borderMuted`, `textPrimary`. Inactive: transparent, `textSubtle`.
+- **Run Query**: Active `yellow500`/`textInverse`. Disabled `bgHover`/`textSubtle`. `minHeight: 32`, `fontWeight: 600`.
+
+### Collapse Animation
+- Collapse: content fades + `translateX(-6px) scale(0.98)` in 100ms → width shrinks with 100ms delay
+- Expand: width grows first → content fades/translates in with 120ms delay. All `easeOutExpo`.
