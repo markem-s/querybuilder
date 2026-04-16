@@ -818,7 +818,6 @@ export default function DiscoverQueryBuilder() {
         }
         /* ── BQ hover states (replaces inline style mutations) ── */
         .bq-trigger:hover { background: ${t.bgHover} !important; }
-        .bq-rail-wrap:hover .rail-x { opacity: 1 !important; }
         .bq-qtab:not([aria-pressed="true"]):hover { background: ${t.bgHover} !important; }
         .bq-collapse:hover { background: ${t.bgHover} !important; }
         .bq-load-item:hover { border-color: ${t.borderMuted} !important; }
@@ -829,6 +828,8 @@ export default function DiscoverQueryBuilder() {
         }
         .bq-rail-btn:hover:not(:disabled) { background: ${t.bgHover} !important; }
         .bq-rail-btn:hover:not(:disabled) svg { color: ${t.textPrimary} !important; }
+        .bq-focus:focus-visible { box-shadow: ${focusRing} !important; outline: none; }
+        .bq-focus:focus:not(:focus-visible) { box-shadow: none !important; }
         @media (prefers-reduced-motion: reduce) {
           *, *::before, *::after {
             animation-duration: 0.01ms !important;
@@ -1170,7 +1171,6 @@ export default function DiscoverQueryBuilder() {
         onActiveChange={setActiveBqId}
         sources={sources}
         sourceGroups={sourceGroups}
-        panelCollapsed={panelCollapsed}
         savedQueries={bqSavedQueries}
         onSave={(q) => setBqSavedQueries((prev) => [...prev.filter((s) => s.id !== q.id), q])}
         onLoad={(q) => { setBqQueries((prev) => [...prev.filter((p) => p.id !== q.id), q]); setActiveBqId(q.id); }}
@@ -2078,16 +2078,15 @@ const BQ_SELECT_BASE = { ...BQ_INPUT_BASE, paddingRight: sp.xl + sp.sm, backgrou
 /* Inline rail button helper */
 function BqRailBtn({ icon: Icon, label, onClick, size = 16, disabled = false }) {
   return (
-    <button className="bq-rail-btn" onClick={disabled ? undefined : onClick} title={label} aria-label={label} disabled={disabled}
+    <button className="bq-rail-btn bq-focus" onClick={disabled ? undefined : onClick} title={label} aria-label={label} disabled={disabled}
       style={{ width: 44, height: 44, padding: 0, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: disabled ? "default" : "pointer", outline: "none", transition: "background 0.12s", opacity: disabled ? 0.3 : 1 }}
-      onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
     >
       <Icon size={size} color={t.textSubtle} style={{ transition: "color 0.12s" }} />
     </button>
   );
 }
 
-export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle, queries, onQueriesChange, activeId, onActiveChange, sources, sourceGroups, panelCollapsed, savedQueries, onSave, onLoad, showLoad, onShowLoadToggle }) {
+export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle, queries, onQueriesChange, activeId, onActiveChange, sources, sourceGroups, savedQueries, onSave, onLoad, showLoad, onShowLoadToggle }) {
   const activeQuery = queries.find((q) => q.id === activeId) || queries[0];
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
@@ -2129,17 +2128,18 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
   const handleLoad = (q) => { onLoad(q); onShowLoadToggle(); };
 
   const canSearch = activeQuery && activeQuery.conditions.length > 0 && activeQuery.conditions.every((c) => c.field && c.operator && c.value);
-  const panelLeft = sp.sm;
+  const canSave = activeQuery && activeQuery.conditions.some((c) => c.field);
+  const isDirty = activeQuery && (activeQuery.conditions.length > 1 || activeQuery.conditions.some((c) => c.field));
   const panelWidth = "min(320px, calc(100vw - 16px))";
 
   /* ── Trigger button (closed) — matches top-left collapsed icon ── */
   if (!open) {
     return (
-      <button className="bq-trigger" onClick={onToggle}
+      <button className="bq-trigger bq-focus" onClick={onToggle}
         title="Open Quick Query"
         aria-label="Open Quick Query"
         style={{
-          position: "absolute", bottom: sp.sm, left: panelLeft, zIndex: 9,
+          position: "absolute", bottom: sp.sm, left: sp.sm, zIndex: 9,
           width: 44, height: 44, padding: 0,
           borderRadius: sp.xs,
           border: `1px solid ${t.glassBorder}`,
@@ -2148,8 +2148,6 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
           cursor: "pointer", outline: "none",
           transition: `opacity ${motion.medium} ${motion.easeOut}, transform ${motion.medium} ${motion.easeOut}, background ${motion.fast}`,
         }}
-        onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-        onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
       >
         <Search size={18} color={t.textSecondary} />
       </button>
@@ -2162,15 +2160,13 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
     const ops = cond.field ? getOperatorsForField(cond.field) : [];
     const inputType = DATE_FIELDS.includes(cond.field) ? "date" : NUMERIC_FIELDS.includes(cond.field) ? "number" : "text";
     const placeholder = SPATIAL_FIELDS.includes(cond.field) ? "GeoJSON / WKT…" : "Value…";
-    const fld = BQ_INPUT_BASE;
-    const selectFld = BQ_SELECT_BASE;
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: sp.xs, padding: `${sp.sm}px`, background: t.bgField, borderRadius: sp.xs, border: `1px solid ${t.borderDark}` }}>
         {/* Row 1: Field + Remove */}
         <div style={{ display: "flex", gap: sp.xs, alignItems: "center" }}>
           <select value={cond.field}
             onChange={(e) => { const f = e.target.value; const nOps = getOperatorsForField(f); updateCondition(cond.id, { field: f, operator: nOps[0] || "", value: "" }); }}
-            style={{ ...selectFld, cursor: "pointer" }}
+            style={{ ...BQ_SELECT_BASE, cursor: "pointer" }}
           >
             <option value="" disabled>Field…</option>
             {Object.entries(FIELD_OPTIONS).map(([scope, fields]) => (
@@ -2180,9 +2176,8 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
             ))}
           </select>
           {activeQuery.conditions.length > 1 && (
-            <button onClick={() => removeRow(cond.id)} aria-label="Remove condition"
+            <button onClick={() => removeRow(cond.id)} className="bq-focus" aria-label="Remove condition"
               style={{ background: "none", border: "none", cursor: "pointer", padding: sp.sm, borderRadius: sp.xs, outline: "none", flexShrink: 0, lineHeight: 1, minWidth: 28, minHeight: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
-              onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
             >
               <X size={11} color={t.textSubtle} />
             </button>
@@ -2192,7 +2187,7 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
         <div style={{ display: "flex", gap: sp.xs }}>
           <select value={cond.operator} onChange={(e) => updateCondition(cond.id, { operator: e.target.value })}
             disabled={!cond.field}
-            style={{ ...selectFld, cursor: cond.field ? "pointer" : "default", opacity: cond.field ? 1 : 0.4 }}
+            style={{ ...BQ_SELECT_BASE, cursor: cond.field ? "pointer" : "default", opacity: cond.field ? 1 : 0.4 }}
           >
             <option value="" disabled>Operator…</option>
             {ops.map((op) => <option key={op} value={op}>{op}</option>)}
@@ -2200,7 +2195,7 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
           <input type={inputType} value={cond.value} placeholder={placeholder}
             onChange={(e) => updateCondition(cond.id, { value: e.target.value })}
             disabled={!cond.operator}
-            style={{ ...fld, opacity: cond.operator ? 1 : 0.4 }}
+            style={{ ...BQ_INPUT_BASE, opacity: cond.operator ? 1 : 0.4 }}
           />
         </div>
       </div>
@@ -2210,7 +2205,7 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
   /* ── Panel (open) ── */
   return (
     <div style={{
-      position: "absolute", bottom: sp.sm, left: panelLeft, zIndex: 10,
+      position: "absolute", bottom: sp.sm, left: sp.sm, zIndex: 10,
       width: collapsed ? 44 : panelWidth,
       maxHeight: collapsed ? (queries.length + 5) * BQ_RAIL_ITEM + sp.xs * 2 + 1 : 460,
       background: t.glassBg, border: `1px solid ${t.glassBorder}`, borderRadius: sp.xs,
@@ -2227,18 +2222,12 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
         background: t.bgBase, borderRight: `1px solid ${collapsed ? "transparent" : t.borderDark}`, paddingTop: sp.xs, gap: 1,
         transition: `border-color ${motion.medium} ${motion.easeOutExpo}`,
       }}>
-        {/* Persistent query icon — top of rail */}
-        <div aria-hidden="true" style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, borderBottom: `1px solid ${t.borderDark}` }}>
-          <Database size={12} color={t.borderSubtle} />
-        </div>
-
         {/* Query tabs */}
         {queries.map((q) => {
           const isActive = q.id === activeId;
           const condCount = q.conditions.filter((c) => c.field).length;
           return (
-            <div className="bq-rail-wrap" key={q.id} style={{ position: "relative", width: 44, height: 44, flexShrink: 0 }}>
-            <button className="bq-qtab" onClick={() => { onActiveChange(q.id); if (collapsed) onCollapseToggle(); if (showLoad) onShowLoadToggle(); setConfirmAction(null); }}
+            <button key={q.id} className="bq-qtab bq-focus" onClick={() => { onActiveChange(q.id); if (collapsed) onCollapseToggle(); if (showLoad) onShowLoadToggle(); setConfirmAction(null); }}
               title={q.name} aria-label={q.name} aria-pressed={isActive}
               style={{
                 width: 44, height: 44, padding: 0,
@@ -2247,7 +2236,6 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                 cursor: "pointer", outline: "none", position: "relative",
                 transition: `background ${motion.fast} ${motion.easeOut}`,
               }}
-              onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
             >
               <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 500, color: isActive ? t.textPrimary : t.textSubtle, transition: `color ${motion.fast} ${motion.easeOut}` }}>
                 {`Q${queries.indexOf(q) + 1}`}
@@ -2260,29 +2248,11 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                 }}>{condCount}</span>
               )}
             </button>
-            {/* Delete X — appears on hover */}
-            <button className="rail-x" onClick={(e) => { e.stopPropagation(); removeQuery(q.id); }}
-              aria-label={`Delete ${q.name}`}
-              style={{
-                position: "absolute", top: 0, right: 0,
-                width: 28, height: 28, padding: sp.xs, borderRadius: sp.xs,
-                background: t.danger, border: "none",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer", outline: "none",
-                opacity: 0, transition: `opacity ${motion.fast} ${motion.easeOut}`,
-              }}
-            >
-              <X size={8} color={t.textPrimary} />
-            </button>
-            </div>
           );
         })}
 
         {/* Spacer */}
         <div style={{ flex: 1 }} />
-
-        {/* Divider */}
-        <div style={{ width: 24, height: 1, background: t.borderDark, margin: `${sp.xs}px 0` }} />
 
         {/* + New Query */}
         <BqRailBtn icon={Plus} label={queries.length >= BQ_MAX_QUERIES ? `Max ${BQ_MAX_QUERIES} queries` : "New query"} onClick={addQuery} disabled={queries.length >= BQ_MAX_QUERIES} />
@@ -2291,9 +2261,8 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
         <BqRailBtn icon={FolderOpen} label="Load saved query" onClick={onShowLoadToggle} />
 
         {/* Collapse/Expand — bottom, icon rotates */}
-        <button className="bq-collapse" onClick={onCollapseToggle} title={collapsed ? "Expand" : "Collapse"} aria-label={collapsed ? "Expand" : "Collapse"} aria-pressed={collapsed}
+        <button className="bq-collapse bq-focus" onClick={onCollapseToggle} title={collapsed ? "Expand" : "Collapse"} aria-label={collapsed ? "Expand" : "Collapse"} aria-pressed={collapsed}
           style={{ width: 44, height: 44, padding: 0, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", outline: "none", transition: "background 0.12s" }}
-          onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
         >
           <ChevronLeft size={14} color={t.textSubtle} style={{ transition: `transform ${motion.medium} ${motion.easeOutExpo}`, transform: collapsed ? "rotate(180deg)" : "rotate(0deg)" }} />
         </button>
@@ -2318,9 +2287,8 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                 <FolderOpen size={14} color={t.textSecondary} style={{ flexShrink: 0 }} />
                 <span style={{ ...type.subheading, fontSize: 12, color: t.textPrimary }}>Load Saved Query</span>
                 <div style={{ flex: 1 }} />
-                <button onClick={onShowLoadToggle} aria-label="Close"
+                <button onClick={onShowLoadToggle} className="bq-focus" aria-label="Close"
                   style={{ background: "none", border: "none", cursor: "pointer", padding: sp.xs, borderRadius: sp.xs, outline: "none" }}
-                  onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                 ><X size={14} color={t.textSubtle} /></button>
               </div>
               <div style={{ flex: 1, overflowY: "auto", padding: sp.md }}>
@@ -2329,14 +2297,13 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                     No saved queries yet. Use the save icon to save the active query.
                   </div>
                 ) : savedQueries.map((sq) => (
-                  <button className="bq-load-item" key={sq.id} onClick={() => handleLoad(sq)}
+                  <button className="bq-load-item bq-focus" key={sq.id} onClick={() => handleLoad(sq)}
                     style={{
                       width: "100%", textAlign: "left", display: "flex", flexDirection: "column", gap: 2,
                       padding: `${sp.sm}px ${sp.md}px`, marginBottom: sp.xs,
                       background: t.bgField, border: `1px solid ${t.borderDark}`, borderRadius: sp.xs,
                       color: t.textPrimary, cursor: "pointer", outline: "none", transition: "border-color 0.12s",
                     }}
-                    onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                   >
                     <span style={{ ...type.body, fontSize: 12, fontWeight: 600 }}>{sq.name}</span>
                     <span style={{ ...type.caption, fontSize: 9, color: t.textSubtle }}>
@@ -2359,21 +2326,14 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                       style={{ flex: 1, minWidth: 0, ...type.subheading, color: t.textPrimary, background: "transparent", border: "none", borderBottom: `1px solid ${t.textPrimary}`, borderRadius: 0, padding: `${sp.xs}px 2px`, outline: "none" }}
                     />
                   ) : (
-                    <button type="button" onClick={() => { setRenameValue(activeQuery.name); setIsRenaming(true); }}
+                    <button type="button" className="bq-focus" onClick={() => { setRenameValue(activeQuery.name); setIsRenaming(true); }}
                       style={{ flex: 1, minWidth: 0, ...type.subheading, cursor: "text", padding: `${sp.xs}px 2px`, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", outline: "none", color: t.textPrimary, background: "none", border: "none", textAlign: "left" }}
-                      onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                     >
                       {activeQuery.name}
                     </button>
                   )}
-                  {/* Save */}
-                  {(() => { const canSave = activeQuery.conditions.some((c) => c.field); return (
-                    <QBarIcon icon={<Save size={14} />} title="Save query" onClick={handleSave} disabled={!canSave} style={{ opacity: canSave ? 1 : 0.3 }} />
-                  ); })()}
-                  {/* Reset */}
-                  {(() => { const isDirty = activeQuery.conditions.length > 1 || activeQuery.conditions.some((c) => c.field); return (
-                    <QBarIcon icon={<RotateCcw size={14} />} title="Reset conditions" onClick={() => setConfirmAction("reset")} disabled={!isDirty} style={{ opacity: isDirty ? 1 : 0.3 }} />
-                  ); })()}
+                  <QBarIcon icon={<Save size={14} />} title="Save query" onClick={handleSave} disabled={!canSave} style={{ opacity: canSave ? 1 : 0.3 }} />
+                  <QBarIcon icon={<RotateCcw size={14} />} title="Reset conditions" onClick={() => setConfirmAction("reset")} disabled={!isDirty} style={{ opacity: isDirty ? 1 : 0.3 }} />
                   {/* Delete */}
                   <QBarIcon icon={<Trash2 size={14} color={t.danger} />} title="Delete query" onClick={() => setConfirmAction("delete")} />
                 </div>
@@ -2408,18 +2368,16 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                   <span style={{ ...type.secondary, fontSize: 11, color: confirmAction === "delete" ? t.danger : t.textPrimary, flex: 1 }}>
                     {confirmAction === "delete" ? "Delete this query?" : "Reset all conditions?"}
                   </span>
-                  <button onClick={() => setConfirmAction(null)}
+                  <button className="bq-focus" onClick={() => setConfirmAction(null)}
                     style={{ background: "none", border: `1px solid ${t.borderMuted}`, borderRadius: sp.xs, color: t.textSecondary, fontSize: 11, padding: `3px ${sp.sm}px`, cursor: "pointer", outline: "none" }}
-                    onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                   >Cancel</button>
-                  <button onClick={confirmAction === "delete" ? confirmAndRemove : resetQuery}
+                  <button className="bq-focus" onClick={confirmAction === "delete" ? confirmAndRemove : resetQuery}
                     style={{
                       background: confirmAction === "delete" ? t.danger : t.textSecondary,
                       border: "none", borderRadius: sp.xs,
                       color: t.textInverse,
                       fontSize: 11, fontWeight: 600, padding: `3px ${sp.md}px`, cursor: "pointer", outline: "none",
                     }}
-                    onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                   >{confirmAction === "delete" ? "Delete" : "Reset"}</button>
                 </div>
               )}
@@ -2439,10 +2397,9 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                 ))}
 
                 {/* + Condition — always visible, full width */}
-                <button className="bq-add-cond" onClick={addRow}
+                <button className="bq-add-cond bq-focus" onClick={addRow}
                   title="Add condition" aria-label="Add condition"
                   style={{ width: "100%", marginTop: sp.sm, minHeight: 36, background: "none", border: `1px dashed ${t.borderMuted}`, borderRadius: sp.xs, color: t.textSubtle, fontSize: 12, padding: `${sp.sm}px`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: sp.xs, outline: "none", transition: `border-color ${motion.fast}, color ${motion.fast}, background ${motion.fast}` }}
-                  onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                 ><Filter size={12} /> Condition</button>
               </div>
 
@@ -2460,7 +2417,7 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                     const isOn = activeQuery.spatialRel === opt.key;
                     const I = opt.icon;
                     return (
-                      <button key={opt.key} onClick={() => updateQuery({ spatialRel: opt.key })}
+                      <button className="bq-focus" key={opt.key} onClick={() => updateQuery({ spatialRel: opt.key })}
                         title={opt.ariaLabel || opt.label} aria-label={opt.ariaLabel || opt.label} aria-pressed={isOn}
                         style={{
                           padding: `${sp.sm}px ${sp.md}px`, minHeight: 32, position: "relative", zIndex: 1,
@@ -2472,7 +2429,6 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                           color: isOn ? t.textPrimary : t.textSubtle,
                           transition: `background ${motion.fast}, border-color ${motion.fast}, color ${motion.fast}`,
                         }}
-                        onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                       >
                         <I size={12} /> {opt.label}
                       </button>
@@ -2481,7 +2437,7 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                 </div>
                 <div style={{ flex: 1 }} />
                 {/* Run Query — icon + text */}
-                <button disabled={!canSearch} onClick={() => {}}
+                <button className="bq-focus" disabled={!canSearch} onClick={() => {}}
                   title="Run query"
                   aria-label="Run query"
                   style={{
@@ -2491,7 +2447,6 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                     display: "flex", alignItems: "center", gap: sp.xs, outline: "none", flexShrink: 0,
                     transition: `background ${motion.fast}, color ${motion.fast}`,
                   }}
-                  onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                 ><Search size={13} /> Run Query</button>
               </div>
             </>
