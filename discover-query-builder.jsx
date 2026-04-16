@@ -1982,7 +1982,7 @@ function ConditionRow({ condition, sources, onRemove }) {
    ══════════════════════════════════════════════════════════════ */
 function dtInputStyle(focused) {
   return {
-    padding: `${sp.xs}px ${sp.sm}px`, ...type.body, fontSize: 11,
+    padding: `4px 6px`, ...type.body, fontSize: 11,
     borderRadius: sp.xs + 2, border: `1px solid ${focused ? t.yellow500 : t.borderSubtle}`,
     background: t.bgField, color: t.textPrimary, outline: "none",
     transition: "border-color 0.15s", width: "100%", boxSizing: "border-box",
@@ -2028,17 +2028,17 @@ function DTSingleInput({ label, dateValue, timeValue, onDateChange, onTimeChange
   const dateRef = useRef(null);
   useEffect(() => { if (autoFocus && dateRef.current) dateRef.current.focus(); }, [autoFocus]);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: sp.xs }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {label && <DTFieldLabel>{label}</DTFieldLabel>}
-      <div style={{ display: "flex", gap: sp.xs }}>
-        <div style={{ width: 120, flexShrink: 0 }}>
+      <div style={{ display: "flex", gap: 4 }}>
+        <div style={{ flex: "0 0 110px" }}>
           <input ref={dateRef} type="date" value={dateValue}
             onChange={(e) => onDateChange(e.target.value)}
             aria-label={label ? `${label} date` : "Date"}
             style={dtInputStyle(dateFocused)}
             onFocus={() => setDateFocused(true)} onBlur={() => setDateFocused(false)} />
         </div>
-        <div style={{ width: 80, flexShrink: 0 }}>
+        <div style={{ flex: "0 0 72px" }}>
           <input type="time" value={timeValue}
             onChange={(e) => onTimeChange(e.target.value)}
             aria-label={label ? `${label} time` : "Time"}
@@ -2142,7 +2142,7 @@ function DateTimeValueInput({ operator, value, onChange, onConfirm }) {
   })();
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: sp.md }}
+    <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}
       onKeyDown={(e) => { if (e.key === "Enter" && isValid) onConfirm(); }}>
 
       {(operator === "before" || operator === "after") && (
@@ -2159,18 +2159,21 @@ function DateTimeValueInput({ operator, value, onChange, onConfirm }) {
       )}
 
       {operator === "between" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: sp.xs }}>
           <div style={{ display: "flex", alignItems: "center", gap: sp.xs, ...type.secondary, color: t.textSubtle }}>
-            <CalendarDays size={12} />
-            <span>Select a date range</span>
+            <CalendarDays size={11} />
+            <span style={{ fontSize: 10 }}>Select a date range</span>
           </div>
-          <DTSingleInput label="From"
-            dateValue={local.date1} timeValue={local.time1}
-            onDateChange={(v) => patch("date1", v)} onTimeChange={(v) => patch("time1", v)}
-            autoFocus />
-          <DTSingleInput label="To"
-            dateValue={local.date2} timeValue={local.time2}
-            onDateChange={(v) => patch("date2", v)} onTimeChange={(v) => patch("time2", v)} />
+          <div style={{ display: "flex", gap: sp.sm, alignItems: "flex-end" }}>
+            <DTSingleInput label="From"
+              dateValue={local.date1} timeValue={local.time1}
+              onDateChange={(v) => patch("date1", v)} onTimeChange={(v) => patch("time1", v)}
+              autoFocus />
+            <div style={{ color: t.textSubtle, fontSize: 10, paddingBottom: 6, flexShrink: 0 }}>→</div>
+            <DTSingleInput label="To"
+              dateValue={local.date2} timeValue={local.time2}
+              onDateChange={(v) => patch("date2", v)} onTimeChange={(v) => patch("time2", v)} />
+          </div>
         </div>
       )}
 
@@ -2187,7 +2190,6 @@ function DateTimeValueInput({ operator, value, onChange, onConfirm }) {
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <DTConfirmButton disabled={!isValid} onClick={onConfirm} />
       </div>
-      <span style={{ ...type.caption, color: t.textSubtle }}>Press Enter to confirm</span>
     </div>
   );
 }
