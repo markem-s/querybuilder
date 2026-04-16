@@ -829,6 +829,7 @@ export default function DiscoverQueryBuilder() {
         .bq-rail-btn:hover:not(:disabled) { background: ${t.bgHover} !important; }
         .bq-rail-btn:hover:not(:disabled) svg { color: ${t.textPrimary} !important; }
         .bq-focus:focus-visible { box-shadow: ${focusRing} !important; outline: none; }
+        @keyframes bqSpin { to { transform: rotate(360deg); } }
         .bq-focus:focus:not(:focus-visible) { box-shadow: none !important; }
         @media (prefers-reduced-motion: reduce) {
           *, *::before, *::after {
@@ -2091,6 +2092,7 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [confirmAction, setConfirmAction] = useState(null); // "reset" | "delete" | null
+  const [isRunning, setIsRunning] = useState(false);
   const nextIdRef = useRef(2);
 
   const updateQuery = (patch) =>
@@ -2436,18 +2438,27 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                   })}
                 </div>
                 <div style={{ flex: 1 }} />
-                {/* Run Query — icon + text */}
-                <button className="bq-focus" disabled={!canSearch} onClick={() => {}}
-                  title="Run query"
-                  aria-label="Run query"
+                {/* Run Query — icon + text, spinner while running */}
+                <button className="bq-focus" disabled={!canSearch || isRunning}
+                  onClick={() => { setIsRunning(true); setTimeout(() => setIsRunning(false), 3000); }}
+                  title={isRunning ? "Running…" : "Run query"}
+                  aria-label={isRunning ? "Query running" : "Run query"}
                   style={{
                     padding: `${sp.sm}px ${sp.md}px`, minHeight: 32, borderRadius: sp.xs, border: "none",
-                    background: canSearch ? t.yellow500 : t.bgHover, color: canSearch ? t.textInverse : t.textSubtle,
-                    fontSize: 12, fontWeight: 600, cursor: canSearch ? "pointer" : "default",
+                    background: isRunning ? t.yellow500 : canSearch ? t.yellow500 : t.bgHover,
+                    color: isRunning ? t.textInverse : canSearch ? t.textInverse : t.textSubtle,
+                    fontSize: 12, fontWeight: 600, cursor: canSearch && !isRunning ? "pointer" : "default",
                     display: "flex", alignItems: "center", gap: sp.xs, outline: "none", flexShrink: 0,
                     transition: `background ${motion.fast}, color ${motion.fast}`,
                   }}
-                ><Search size={13} /> Run Query</button>
+                >
+                  {isRunning ? (
+                    <span style={{ width: 13, height: 13, border: `2px solid ${t.textInverse}40`, borderTopColor: t.textInverse, borderRadius: "50%", animation: "bqSpin 0.6s linear infinite", flexShrink: 0 }} />
+                  ) : (
+                    <Search size={13} />
+                  )}
+                  {isRunning ? "Running…" : "Run Query"}
+                </button>
               </div>
             </>
           )}
