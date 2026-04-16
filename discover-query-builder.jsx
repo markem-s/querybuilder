@@ -816,6 +816,19 @@ export default function DiscoverQueryBuilder() {
           from { opacity: 0; }
           to   { opacity: 1; }
         }
+        /* ── BQ hover states (replaces inline style mutations) ── */
+        .bq-trigger:hover { background: ${t.bgHover} !important; }
+        .bq-rail-wrap:hover .rail-x { opacity: 1 !important; }
+        .bq-qtab:not([aria-pressed="true"]):hover { background: ${t.bgHover} !important; }
+        .bq-collapse:hover { background: ${t.bgHover} !important; }
+        .bq-load-item:hover { border-color: ${t.borderMuted} !important; }
+        .bq-add-cond:hover {
+          border-color: ${t.borderSubtle} !important;
+          color: ${t.textPrimary} !important;
+          background: ${t.bgHover} !important;
+        }
+        .bq-rail-btn:hover:not(:disabled) { background: ${t.bgHover} !important; }
+        .bq-rail-btn:hover:not(:disabled) svg { color: ${t.textPrimary} !important; }
         @media (prefers-reduced-motion: reduce) {
           *, *::before, *::after {
             animation-duration: 0.01ms !important;
@@ -2055,17 +2068,21 @@ function ConditionGroup({ group, groupIndex, groupCount, sources, canRemove, onT
    BOTTOM QUERY BUILDER — conterra-style inline conditions
    ══════════════════════════════════════════════════════════════ */
 const BQ_MAX_QUERIES = 5;
+const BQ_RAIL_ITEM = 44; // Rail button height — used for collapsed maxHeight calculation
+const BQ_SHADOW_SM = "0 2px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3)";
+const BQ_SHADOW_LG = "0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)";
+const CHEVRON_SVG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23525252' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`;
+const BQ_INPUT_BASE = { ...dtInputStyle(false), flex: 1, fontSize: 12, padding: `${sp.xs}px ${sp.sm}px` };
+const BQ_SELECT_BASE = { ...BQ_INPUT_BASE, paddingRight: sp.xl + sp.sm, backgroundImage: CHEVRON_SVG, backgroundRepeat: "no-repeat", backgroundPosition: `right ${sp.sm}px center` };
 
 /* Inline rail button helper */
 function BqRailBtn({ icon: Icon, label, onClick, size = 16, disabled = false }) {
   return (
-    <button onClick={disabled ? undefined : onClick} title={label} aria-label={label} disabled={disabled}
+    <button className="bq-rail-btn" onClick={disabled ? undefined : onClick} title={label} aria-label={label} disabled={disabled}
       style={{ width: 44, height: 44, padding: 0, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: disabled ? "default" : "pointer", outline: "none", transition: "background 0.12s", opacity: disabled ? 0.3 : 1 }}
-      onMouseEnter={(e) => { if (!disabled) { e.currentTarget.style.background = t.bgHover; e.currentTarget.querySelector("svg").style.color = t.textPrimary; } }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.querySelector("svg").style.color = t.textSubtle; }}
       onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
     >
-      <Icon size={size} color={t.textSubtle} />
+      <Icon size={size} color={t.textSubtle} style={{ transition: "color 0.12s" }} />
     </button>
   );
 }
@@ -2118,7 +2135,7 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
   /* ── Trigger button (closed) — matches top-left collapsed icon ── */
   if (!open) {
     return (
-      <button onClick={onToggle}
+      <button className="bq-trigger" onClick={onToggle}
         title="Open Quick Query"
         aria-label="Open Quick Query"
         style={{
@@ -2131,8 +2148,6 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
           cursor: "pointer", outline: "none",
           transition: `opacity ${motion.medium} ${motion.easeOut}, transform ${motion.medium} ${motion.easeOut}, background ${motion.fast}`,
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = t.bgHover)}
-        onMouseLeave={(e) => (e.currentTarget.style.background = t.glassBg)}
         onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
         onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
       >
@@ -2147,9 +2162,8 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
     const ops = cond.field ? getOperatorsForField(cond.field) : [];
     const inputType = DATE_FIELDS.includes(cond.field) ? "date" : NUMERIC_FIELDS.includes(cond.field) ? "number" : "text";
     const placeholder = SPATIAL_FIELDS.includes(cond.field) ? "GeoJSON / WKT…" : "Value…";
-    const fld = { ...dtInputStyle(false), flex: 1, fontSize: 12, padding: `${sp.xs}px ${sp.sm}px` };
-    const chevronSvg = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23525252' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`;
-    const selectFld = { ...fld, paddingRight: sp.xl + sp.sm, backgroundImage: chevronSvg, backgroundRepeat: "no-repeat", backgroundPosition: `right ${sp.sm}px center` };
+    const fld = BQ_INPUT_BASE;
+    const selectFld = BQ_SELECT_BASE;
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: sp.xs, padding: `${sp.sm}px`, background: t.bgField, borderRadius: sp.xs, border: `1px solid ${t.borderDark}` }}>
         {/* Row 1: Field + Remove */}
@@ -2198,11 +2212,9 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
     <div style={{
       position: "absolute", bottom: sp.sm, left: panelLeft, zIndex: 10,
       width: collapsed ? 44 : panelWidth,
-      maxHeight: collapsed ? (queries.length + 5) * 44 + sp.xs * 2 + 1 : 460,
+      maxHeight: collapsed ? (queries.length + 5) * BQ_RAIL_ITEM + sp.xs * 2 + 1 : 460,
       background: t.glassBg, border: `1px solid ${t.glassBorder}`, borderRadius: sp.xs,
-      boxShadow: collapsed
-        ? "0 2px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3)"
-        : "0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)",
+      boxShadow: collapsed ? BQ_SHADOW_SM : BQ_SHADOW_LG,
       display: "flex", flexDirection: "row", overflow: "hidden",
       willChange: "width",
       transition: collapsed
@@ -2225,11 +2237,8 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
           const isActive = q.id === activeId;
           const condCount = q.conditions.filter((c) => c.field).length;
           return (
-            <div key={q.id} style={{ position: "relative", width: 44, height: 44, flexShrink: 0 }}
-              onMouseEnter={(e) => { const x = e.currentTarget.querySelector(".rail-x"); if (x) x.style.opacity = "1"; }}
-              onMouseLeave={(e) => { const x = e.currentTarget.querySelector(".rail-x"); if (x) x.style.opacity = "0"; }}
-            >
-            <button onClick={() => { onActiveChange(q.id); if (collapsed) onCollapseToggle(); if (showLoad) onShowLoadToggle(); setConfirmAction(null); }}
+            <div className="bq-rail-wrap" key={q.id} style={{ position: "relative", width: 44, height: 44, flexShrink: 0 }}>
+            <button className="bq-qtab" onClick={() => { onActiveChange(q.id); if (collapsed) onCollapseToggle(); if (showLoad) onShowLoadToggle(); setConfirmAction(null); }}
               title={q.name} aria-label={q.name} aria-pressed={isActive}
               style={{
                 width: 44, height: 44, padding: 0,
@@ -2238,8 +2247,6 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                 cursor: "pointer", outline: "none", position: "relative",
                 transition: `background ${motion.fast} ${motion.easeOut}`,
               }}
-              onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = t.bgHover; }}
-              onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent"; else e.currentTarget.style.background = t.bgHover; }}
               onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
             >
               <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 500, color: isActive ? t.textPrimary : t.textSubtle, transition: `color ${motion.fast} ${motion.easeOut}` }}>
@@ -2247,9 +2254,9 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
               </span>
               {condCount > 0 && (
                 <span style={{
-                  position: "absolute", top: 3, right: 4, fontSize: 7, fontWeight: 700,
-                  color: t.textInverse, background: t.textSecondary, borderRadius: 5, minWidth: 12, height: 12,
-                  display: "flex", alignItems: "center", justifyContent: "center", padding: "0 2px", lineHeight: 1,
+                  position: "absolute", top: sp.xs - 1, right: sp.xs, fontSize: 7, fontWeight: 700,
+                  color: t.textInverse, background: t.textSecondary, borderRadius: sp.xs + 1, minWidth: 12, height: 12,
+                  display: "flex", alignItems: "center", justifyContent: "center", padding: `0 ${sp.xs - 2}px`, lineHeight: 1,
                 }}>{condCount}</span>
               )}
             </button>
@@ -2258,7 +2265,7 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
               aria-label={`Delete ${q.name}`}
               style={{
                 position: "absolute", top: 0, right: 0,
-                width: 18, height: 18, padding: 2, borderRadius: 3,
+                width: 28, height: 28, padding: sp.xs, borderRadius: sp.xs,
                 background: t.danger, border: "none",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 cursor: "pointer", outline: "none",
@@ -2284,9 +2291,8 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
         <BqRailBtn icon={FolderOpen} label="Load saved query" onClick={onShowLoadToggle} />
 
         {/* Collapse/Expand — bottom, icon rotates */}
-        <button onClick={onCollapseToggle} title={collapsed ? "Expand" : "Collapse"} aria-label={collapsed ? "Expand" : "Collapse"}
+        <button className="bq-collapse" onClick={onCollapseToggle} title={collapsed ? "Expand" : "Collapse"} aria-label={collapsed ? "Expand" : "Collapse"} aria-pressed={collapsed}
           style={{ width: 44, height: 44, padding: 0, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", outline: "none", transition: "background 0.12s" }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = t.bgHover; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
           onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
         >
           <ChevronLeft size={14} color={t.textSubtle} style={{ transition: `transform ${motion.medium} ${motion.easeOutExpo}`, transform: collapsed ? "rotate(180deg)" : "rotate(0deg)" }} />
@@ -2323,15 +2329,13 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                     No saved queries yet. Use the save icon to save the active query.
                   </div>
                 ) : savedQueries.map((sq) => (
-                  <button key={sq.id} onClick={() => handleLoad(sq)}
+                  <button className="bq-load-item" key={sq.id} onClick={() => handleLoad(sq)}
                     style={{
                       width: "100%", textAlign: "left", display: "flex", flexDirection: "column", gap: 2,
                       padding: `${sp.sm}px ${sp.md}px`, marginBottom: sp.xs,
                       background: t.bgField, border: `1px solid ${t.borderDark}`, borderRadius: sp.xs,
                       color: t.textPrimary, cursor: "pointer", outline: "none", transition: "border-color 0.12s",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = t.borderMuted)}
-                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = t.borderDark)}
                     onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                   >
                     <span style={{ ...type.body, fontSize: 12, fontWeight: 600 }}>{sq.name}</span>
@@ -2351,18 +2355,16 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                   {isRenaming ? (
                     <input autoFocus value={renameValue}
                       onChange={(e) => setRenameValue(e.target.value)} onBlur={commitRename}
-                      onKeyDown={(e) => e.key === "Enter" && commitRename()}
+                      onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setIsRenaming(false); }}
                       style={{ flex: 1, minWidth: 0, ...type.subheading, color: t.textPrimary, background: "transparent", border: "none", borderBottom: `1px solid ${t.textPrimary}`, borderRadius: 0, padding: `${sp.xs}px 2px`, outline: "none" }}
                     />
                   ) : (
-                    <span onClick={() => { setRenameValue(activeQuery.name); setIsRenaming(true); }}
-                      role="button" tabIndex={0}
-                      onKeyDown={(e) => e.key === "Enter" && (setRenameValue(activeQuery.name), setIsRenaming(true))}
-                      style={{ flex: 1, minWidth: 0, ...type.subheading, cursor: "text", padding: `${sp.xs}px 2px`, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", outline: "none", color: t.textPrimary }}
+                    <button type="button" onClick={() => { setRenameValue(activeQuery.name); setIsRenaming(true); }}
+                      style={{ flex: 1, minWidth: 0, ...type.subheading, cursor: "text", padding: `${sp.xs}px 2px`, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", outline: "none", color: t.textPrimary, background: "none", border: "none", textAlign: "left" }}
                       onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                     >
                       {activeQuery.name}
-                    </span>
+                    </button>
                   )}
                   {/* Save */}
                   {(() => { const canSave = activeQuery.conditions.some((c) => c.field); return (
@@ -2378,7 +2380,7 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                 {/* Row 2: Source + AND/OR */}
                 <div style={{ display: "flex", alignItems: "center", gap: sp.sm, marginTop: sp.xs, padding: `0 ${sp.sm}px` }}>
                   <select value={activeQuery.source} onChange={(e) => updateQuery({ source: e.target.value })}
-                    style={{ flex: 1, fontSize: 12, padding: `${sp.xs}px ${sp.sm}px`, paddingRight: sp.xl + sp.sm, cursor: "pointer", color: activeQuery.source ? t.textPrimary : t.textSubtle, background: t.bgField, border: "none", borderRadius: sp.xs + 2, outline: "none", colorScheme: "dark", WebkitAppearance: "none", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23525252' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: `right ${sp.sm}px center` }}
+                    style={{ flex: 1, fontSize: 12, padding: `${sp.xs}px ${sp.sm}px`, paddingRight: sp.xl + sp.sm, cursor: "pointer", color: activeQuery.source ? t.textPrimary : t.textSubtle, background: t.bgField, border: "none", borderRadius: sp.xs + 2, outline: "none", colorScheme: "dark", WebkitAppearance: "none", appearance: "none", backgroundImage: CHEVRON_SVG, backgroundRepeat: "no-repeat", backgroundPosition: `right ${sp.sm}px center` }}
                   >
                     <option value="" disabled>Select Source…</option>
                     {(sourceGroups || []).map((grp) => (
@@ -2395,7 +2397,7 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
 
               {/* Confirmation bar — slides in for destructive actions */}
               {confirmAction && (
-                <div style={{
+                <div role="status" aria-live="polite" style={{
                   display: "flex", alignItems: "center", gap: sp.sm,
                   padding: `${sp.sm}px ${sp.md}px`,
                   background: confirmAction === "delete" ? t.danger + "18" : t.bgRaised,
@@ -2414,7 +2416,7 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                     style={{
                       background: confirmAction === "delete" ? t.danger : t.textSecondary,
                       border: "none", borderRadius: sp.xs,
-                      color: confirmAction === "delete" ? "#fff" : t.textInverse,
+                      color: t.textInverse,
                       fontSize: 11, fontWeight: 600, padding: `3px ${sp.md}px`, cursor: "pointer", outline: "none",
                     }}
                     onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
@@ -2437,11 +2439,9 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                 ))}
 
                 {/* + Condition — always visible, full width */}
-                <button onClick={addRow}
+                <button className="bq-add-cond" onClick={addRow}
                   title="Add condition" aria-label="Add condition"
                   style={{ width: "100%", marginTop: sp.sm, minHeight: 36, background: "none", border: `1px dashed ${t.borderMuted}`, borderRadius: sp.xs, color: t.textSubtle, fontSize: 12, padding: `${sp.sm}px`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: sp.xs, outline: "none", transition: `border-color ${motion.fast}, color ${motion.fast}, background ${motion.fast}` }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = t.borderSubtle; e.currentTarget.style.color = t.textPrimary; e.currentTarget.style.background = t.bgHover; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = t.borderMuted; e.currentTarget.style.color = t.textSubtle; e.currentTarget.style.background = "none"; }}
                   onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)} onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                 ><Filter size={12} /> Condition</button>
               </div>
@@ -2452,7 +2452,7 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                 padding: `${sp.sm}px ${sp.sm}px`, borderTop: `1px solid ${t.borderDark}`, flexShrink: 0,
               }}>
                 {/* Everywhere / Viewport toggle — icon + text */}
-                <div style={{ display: "flex", background: t.bgField, borderRadius: 4, border: `1px solid ${t.borderDark}`, padding: 2, gap: 1 }}>
+                <div style={{ display: "flex", background: t.bgField, borderRadius: sp.xs, border: `1px solid ${t.borderDark}`, padding: 2, gap: 1 }}>
                   {[
                     { key: "everywhere", icon: Globe, label: "All", ariaLabel: "Search everywhere" },
                     { key: "current_extent", icon: SquareDashed, label: "View", ariaLabel: "Search current viewport" },
@@ -2461,12 +2461,12 @@ export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle
                     const I = opt.icon;
                     return (
                       <button key={opt.key} onClick={() => updateQuery({ spatialRel: opt.key })}
-                        title={opt.ariaLabel || opt.label} aria-label={opt.ariaLabel || opt.label}
+                        title={opt.ariaLabel || opt.label} aria-label={opt.ariaLabel || opt.label} aria-pressed={isOn}
                         style={{
                           padding: `${sp.sm}px ${sp.md}px`, minHeight: 32, position: "relative", zIndex: 1,
                           background: isOn ? t.bgRaised : "transparent",
                           border: isOn ? `1px solid ${t.borderMuted}` : "1px solid transparent",
-                          borderRadius: 3, cursor: "pointer", outline: "none",
+                          borderRadius: sp.xs - 1, cursor: "pointer", outline: "none",
                           display: "flex", alignItems: "center", gap: sp.xs,
                           fontSize: 11, fontWeight: isOn ? 600 : 400,
                           color: isOn ? t.textPrimary : t.textSubtle,
