@@ -1114,50 +1114,45 @@ export default function DiscoverQueryBuilder() {
         <MapPlaceholder sources={sources} filteredCounts={filteredCounts} baseMap={baseMap} heatmapEnabled={heatmapEnabled} drawerOpen={drawerOpen} onDeviceClick={(device) => { setSelectedDevice(device); setDrawerOpen(true); }} onMapReady={(map) => { sharedMapRef.current = map; }} />
       </div>
 
-      {/* ═══ TOOLBAR + DRAWER — shared floating container ═══
-           The container is always pinned right: sp.sm.
-           Drawer slides in from the right, flush against the toolbar's left edge.
-           No gap between them — they share one border/shadow surface. */}
+      {/* ═══ TOOLBAR — horizontal top bar, full width ═══ */}
       <div style={{
         position: "absolute",
         top: sp.sm,
+        left: sp.sm,
         right: sp.sm,
-        bottom: sp.sm,
+        height: 44,
         zIndex: 11,
-        display: "flex",
-        flexDirection: "row",
-        alignItems: "stretch",
         background: t.glassBg,
         border: `1px solid ${t.glassBorder}`,
         borderRadius: sp.xs,
         boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)",
-        overflow: "hidden",
       }}>
+        <MapToolbar mapRef={sharedMapRef} />
+      </div>
 
-        {/* Device drawer — width animates 0 → 320, slides in from the right */}
-        <div
-          role="region"
-          aria-label="Device Details"
-          aria-hidden={!drawerOpen}
-          style={{
-            width: drawerOpen ? 320 : 0,
-            overflow: "hidden",
-            flexShrink: 0,
-            borderRight: drawerOpen ? `1px solid ${t.glassBorder}` : "none",
-            transition: prefersReduced ? "none" : `width ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}`,
-          }}
-        >
-          {/* Inner wrapper keeps the panel at its full 320px so content doesn't squish */}
-          <div style={{ width: 320, height: "100%", display: "flex", flexDirection: "column" }}>
-            <DevicePanel device={selectedDevice} onClose={() => { setDrawerOpen(false); setSelectedDevice(null); }} />
-          </div>
+      {/* ═══ DEVICE DRAWER — floating panel, right side ═══ */}
+      <div
+        role="region"
+        aria-label="Device Details"
+        aria-hidden={!drawerOpen}
+        style={{
+          position: "absolute",
+          top: sp.sm + 44 + sp.sm,
+          right: sp.sm,
+          bottom: sp.sm,
+          width: drawerOpen ? 320 : 0,
+          overflow: "hidden",
+          zIndex: 11,
+          background: t.glassBg,
+          border: drawerOpen ? `1px solid ${t.glassBorder}` : "none",
+          borderRadius: sp.xs,
+          boxShadow: drawerOpen ? "0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)" : "none",
+          transition: prefersReduced ? "none" : `width ${motion.slow} ${drawerOpen ? motion.easeOut : motion.easeIn}`,
+        }}
+      >
+        <div style={{ width: 320, height: "100%", display: "flex", flexDirection: "column" }}>
+          <DevicePanel device={selectedDevice} onClose={() => { setDrawerOpen(false); setSelectedDevice(null); }} />
         </div>
-
-        {/* Toolbar — always visible, flush right */}
-        <div style={{ width: 44, flexShrink: 0 }}>
-          <MapToolbar mapRef={sharedMapRef} />
-        </div>
-
       </div>
 
       {/* ═══ BOTTOM QUERY BUILDER (conterra-style, multi-query) ═══ */}
@@ -3358,7 +3353,7 @@ function ToggleRow({ label, checked, onChange }) {
    ══════════════════════════════════════════════════════════════ */
 function ToolbarDivider() {
   return (
-    <div style={{ width: 24, height: 1, background: t.borderDark, margin: `${sp.xs}px 0`, flexShrink: 0 }} />
+    <div style={{ width: 1, height: 24, background: t.borderDark, margin: `0 ${sp.xs}px`, flexShrink: 0, alignSelf: "center" }} />
   );
 }
 
@@ -3399,10 +3394,10 @@ function MapToolbar({ mapRef }) {
   };
 
   return (
-    <div style={{ width: 44, height: "100%", display: "flex", flexDirection: "column", alignItems: "center", background: "transparent", boxSizing: "border-box", position: "relative", overflow: "hidden" }}>
+    <div style={{ width: "100%", height: 44, display: "flex", flexDirection: "row", alignItems: "center", background: "transparent", boxSizing: "border-box", position: "relative", paddingLeft: sp.xs, paddingRight: sp.xs }}>
 
-      {/* ── Top group ── */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: sp.xs }}>
+      {/* ── Left group ── */}
+      <div style={{ display: "flex", flexDirection: "row", alignItems: "center" }}>
         <ToolbarBtn icon={Flag}     label="Flag" />
         <ToolbarDivider />
         <ToolbarBtn icon={Layers}   label="Layers" />
@@ -3415,10 +3410,8 @@ function MapToolbar({ mapRef }) {
       {/* ── Spacer ── */}
       <div style={{ flex: 1 }} />
 
-      {/* ── Bottom group: search + zoom ── */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingBottom: sp.xs }}>
-        <ToolbarDivider />
-
+      {/* ── Right group: search + zoom ── */}
+      <div style={{ display: "flex", flexDirection: "row", alignItems: "center" }}>
         {/* Search toggle */}
         <button
           title="Search"
@@ -3469,14 +3462,14 @@ function MapToolbar({ mapRef }) {
         >−</button>
       </div>
 
-      {/* ── Search input — floating panel, slides left out of the railing ── */}
+      {/* ── Search input — drops down below the toolbar ── */}
       <div style={{
         position: "absolute",
-        right: 44,   /* exits left from the toolbar edge */
-        bottom: sp.sm,
-        width: searchOpen ? 240 : 220,
+        top: 44 + sp.xs,
+        right: sp.sm,
+        width: searchOpen ? 280 : 260,
         opacity: searchOpen ? 1 : 0,
-        transform: searchOpen ? "translateX(0)" : "translateX(12px)",
+        transform: searchOpen ? "translateY(0)" : "translateY(-8px)",
         transition: prefersReduced ? "none" : `opacity ${motion.medium} ${motion.easeOut}, transform ${motion.medium} ${motion.easeOut}, width ${motion.medium} ${motion.easeOut}`,
         pointerEvents: searchOpen ? "auto" : "none",
         background: t.glassBg,
@@ -3485,6 +3478,7 @@ function MapToolbar({ mapRef }) {
         boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)",
         padding: `${sp.sm}px`,
         boxSizing: "border-box",
+        zIndex: 1,
       }}>
         <div style={{ position: "relative" }}>
           <Search size={13} color={t.textSubtle} style={{ position: "absolute", left: sp.sm, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
