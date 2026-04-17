@@ -25,8 +25,6 @@ import {
   Database,
   Sliders,
   FolderOpen,
-  PanelLeftClose,
-  PanelLeftOpen,
   Edit3,
   ArrowUp,
   ArrowDown,
@@ -188,6 +186,7 @@ const motion = {
   slow: "400ms",
   easeOut: "cubic-bezier(0.25, 1, 0.5, 1)",
   easeIn: "cubic-bezier(0.5, 0, 0.75, 0)",
+  easeOutExpo: "cubic-bezier(0.16, 1, 0.3, 1)",
 };
 
 /* ── Reduced-motion hook ── */
@@ -226,7 +225,7 @@ const INITIAL_SOURCE_GROUPS = [
     name: "Device Intelligence",
     collapsed: false,
     sources: [
-      { id: "ds1", name: "Device Locations", type: "geospatial", color: "#4A9EFF", records: 82340, visible: true, system: false, layerType: "point", opacity: 80, pointSize: 4, colorBy: "none", showLabels: false, blendMode: "normal", layers: [] },
+      { id: "ds1", name: "UTS Data", type: "geospatial", color: "#4A9EFF", records: 82340, visible: true, system: false, layerType: "point", opacity: 80, pointSize: 4, colorBy: "none", showLabels: false, blendMode: "normal", layers: [] },
       { id: "ds2", name: "Cell Tower Pings", type: "geospatial", color: "#22C55E", records: 41200, visible: true, system: false, layerType: "point", opacity: 70, pointSize: 6, colorBy: "none", showLabels: false, blendMode: "additive", layers: [] },
     ],
   },
@@ -260,6 +259,14 @@ const INITIAL_SOURCE_GROUPS = [
       { id: "loi-23", name: "Shopping Centre", type: "geospatial", color: "#F59E0B", records: 16, visible: false, system: false, layerType: "point", opacity: 80, pointSize: 6, colorBy: "none", showLabels: false, blendMode: "normal", layers: [] },
       { id: "loi-24", name: "Stadium", type: "geospatial", color: "#F59E0B", records: 6, visible: false, system: false, layerType: "point", opacity: 80, pointSize: 6, colorBy: "none", showLabels: false, blendMode: "normal", layers: [] },
       { id: "loi-25", name: "Train Station", type: "geospatial", color: "#F59E0B", records: 9, visible: false, system: false, layerType: "point", opacity: 80, pointSize: 6, colorBy: "none", showLabels: false, blendMode: "normal", layers: [] },
+    ],
+  },
+  {
+    id: "sg4",
+    name: "Events",
+    collapsed: false,
+    sources: [
+      { id: "ds-crime", name: "Crime Data", type: "geospatial", color: "#EC4899", records: 12400, visible: true, system: false, layerType: "point", opacity: 80, pointSize: 5, colorBy: "none", showLabels: false, blendMode: "normal", layers: [] },
     ],
   },
   {
@@ -368,38 +375,54 @@ const FIELD_OPTIONS = {
   spatial: [
     { name: "Area of Interest", icon: Target, desc: "Named geographic zone" },
     { name: "Proximity to LOI", icon: Radar, desc: "Distance from a location of interest" },
-    { name: "Country", icon: Globe, desc: "Country-level boundary" },
-    { name: "Region", icon: Map, desc: "State or administrative region" },
-    { name: "City", icon: Navigation, desc: "City-level boundary" },
+    { name: "Country", icon: Globe, desc: "ISO 3166-1 country code (e.g. USA, UKR)" },
+    { name: "Region", icon: Map, desc: "State or province abbreviation (e.g. UT)" },
+    { name: "City", icon: Navigation, desc: "City name — normalised to lowercase" },
+    { name: "Zipcode", icon: Hash, desc: "Postal code associated with the location" },
+    { name: "Metro", icon: Building2, desc: "DMA / metro market code" },
     { name: "Lat/Lng Bounds", icon: CircleDot, desc: "Custom coordinate rectangle" },
+    { name: "Accuracy", icon: Ruler, desc: "Estimated location accuracy radius in metres" },
+    { name: "Geo Type", icon: Milestone, desc: "Location source: 1=GPS, 2=IP, 3=User" },
   ],
   time: [
-    { name: "Timestamp", icon: Clock, desc: "Exact event time" },
+    { name: "Timestamp", icon: Clock, desc: "UTC event time (ISO 8601)" },
     { name: "First Seen", icon: CalendarDays, desc: "Earliest recorded appearance" },
     { name: "Last Seen", icon: CalendarDays, desc: "Most recent appearance" },
     { name: "Duration in Area", icon: Timer, desc: "Time spent within a zone" },
   ],
   attribute: [
-    { name: "Device Type", icon: Smartphone, desc: "Mobile, tablet, IoT, etc." },
-    { name: "Carrier", icon: Radio, desc: "Network carrier or operator" },
-    { name: "IMSI Prefix", icon: Hash, desc: "Subscriber identity prefix" },
-    { name: "IMEI TAC", icon: Hash, desc: "Device type allocation code" },
-    { name: "Signal Strength", icon: Signal, desc: "Measured signal power (dBm)" },
-    { name: "Network Protocol", icon: Wifi, desc: "2G, 3G, 4G, 5G" },
-    { name: "Flagged Status", icon: Flag, desc: "Whether device is flagged" },
+    { name: "Device ID", icon: Smartphone, desc: "IDFA or AAID — hashed opaque identifier" },
+    { name: "ID Type", icon: Tag, desc: "Identifier type: idfa, aaid, cookie, hashed email" },
+    { name: "Device Type", icon: MonitorSmartphone, desc: "Mobile, tablet, desktop, TV, CTV" },
+    { name: "Device OS", icon: Settings, desc: "Normalised OS family (iOS, Android)" },
+    { name: "Device OS Version", icon: Settings, desc: "OS version string (e.g. 18.0.1)" },
+    { name: "Device Make", icon: Box, desc: "Manufacturer (Apple, Samsung, etc.)" },
+    { name: "Device Model", icon: Smartphone, desc: "Model identifier (e.g. SM-A525F)" },
+    { name: "Connection Type", icon: Wifi, desc: "Network type: wifi, cellular, ethernet" },
+    { name: "Carrier", icon: Radio, desc: "Mobile carrier or ISP — verify via WHOIS" },
+    { name: "IPv4", icon: Globe, desc: "IPv4 address associated with the request" },
+    { name: "App Name", icon: AppWindow, desc: "Name of the app where event occurred" },
+    { name: "App Bundle", icon: Box, desc: "App bundle ID or package name" },
+    { name: "Domain", icon: Globe, desc: "Publisher domain for site inventory" },
+    { name: "User Agent", icon: FileText, desc: "Full UA string from browser or app webview" },
+    { name: "Flagged Status", icon: Flag, desc: "Whether device is flagged for review" },
   ],
 };
 
 const OPERATOR_OPTIONS = {
-  string: ["equals", "not equals", "contains", "starts with", "in list"],
-  numeric: ["greater than", "less than", "between", "equals"],
-  spatial: ["within", "outside", "within radius of"],
+  string: ["equals", "not equals", "contains", "starts with", "in list", "exists"],
+  numeric: ["greater than", "less than", "between", "equals", "not equals"],
+  spatial: ["within", "outside"],
   date: ["before", "after", "between", "last N days"],
+  ip: ["equals", "starts with", "in list"],
+  enum: ["equals", "not equals", "in list"],
 };
 
-const NUMERIC_FIELDS = ["Signal Strength", "Duration in Area"];
+const NUMERIC_FIELDS = ["Accuracy", "Geo Type", "Duration in Area", "Metro"];
 const DATE_FIELDS = ["Timestamp", "First Seen", "Last Seen"];
 const SPATIAL_FIELDS = ["Area of Interest", "Proximity to LOI", "Lat/Lng Bounds"];
+const ENUM_FIELDS = ["Device Type", "Connection Type", "ID Type", "Device OS", "Geo Type"];
+const IP_FIELDS = ["IPv4"];
 
 /* ── Saved queries (simulated persistence) ── */
 const SAVED_QUERIES = [
@@ -430,6 +453,8 @@ function getOperatorsForField(field) {
   if (NUMERIC_FIELDS.includes(field)) return OPERATOR_OPTIONS.numeric;
   if (DATE_FIELDS.includes(field)) return OPERATOR_OPTIONS.date;
   if (SPATIAL_FIELDS.includes(field)) return OPERATOR_OPTIONS.spatial;
+  if (IP_FIELDS.includes(field)) return OPERATOR_OPTIONS.ip;
+  if (ENUM_FIELDS.includes(field)) return OPERATOR_OPTIONS.enum;
   return OPERATOR_OPTIONS.string;
 }
 
@@ -452,7 +477,6 @@ function readBack(c) {
 
   if (c.scope === "time" && c.operator === "between") return `${c.field} between ${val}`;
   if (c.scope === "spatial" && c.operator === "within") return `${c.field} within ${val}`;
-  if (c.scope === "spatial" && c.operator === "within radius of") return `Within ${val} of ${c.field}`;
   return `${c.field} ${c.operator} ${val}`;
 }
 
@@ -470,7 +494,51 @@ function simulateFilteredCount(baseCounts, groups) {
 }
 
 let _cid = 4;
-let _gid = 2;
+let _gid = 4;
+
+const INITIAL_GROUPS = [
+  {
+    id: 1,
+    name: "UTS Data",
+    sourceId: "ds1",
+    logic: "AND",
+    isDefault: true,
+    hint: "Filter device locations captured by the UTS sensor network.",
+    conditions: [
+      { id: 1, scope: "spatial", field: "Area of Interest", operator: "within", value: "Downtown Sector 4" },
+      { id: 2, scope: "time", field: "Timestamp", operator: "between", value: "2026-03-01 – 2026-03-07" },
+    ],
+  },
+  {
+    id: 2,
+    name: "Events",
+    sourceId: "ds-crime",
+    logic: "AND",
+    isDefault: true,
+    hint: "Filter crime and incident records by type, status, or attributes.",
+    conditions: [
+      { id: 3, scope: "attribute", field: "Device Type", operator: "equals", value: "Mobile" },
+    ],
+  },
+  {
+    id: 3,
+    name: "Locations of Interest",
+    sourceId: "loi-01",
+    logic: "AND",
+    isDefault: true,
+    hint: "Filter by proximity or overlap with specific venue types.",
+    conditions: [],
+  },
+  {
+    id: 4,
+    name: "System Generated",
+    sourceId: "ds3",
+    logic: "AND",
+    isDefault: true,
+    hint: "Automatically flagged activity and system-generated records.",
+    conditions: [],
+  },
+];
 
 /* ══════════════════════════════════════════════════════════════
    MAIN COMPONENT
@@ -481,7 +549,7 @@ export default function DiscoverQueryBuilder() {
   const prefersReduced = useReducedMotion();
 
   /* GAP 5: Collapse-to-tab */
-  const [panelCollapsed, setPanelCollapsed] = useState(false);
+  const [panelCollapsed, setPanelCollapsed] = useState(true);
 
   const [activeSection, setActiveSection] = useState("sources");
 
@@ -490,22 +558,23 @@ export default function DiscoverQueryBuilder() {
   const sources = useMemo(() => flattenGroups(sourceGroups), [sourceGroups]);
   const setSources = null; // Removed — use sourceGroups mutations below
 
-  const [groups, setGroups] = useState([
-    {
-      id: 1,
-      name: "Group 1",
-      logic: "AND",
-      conditions: [
-        { id: 1, scope: "spatial", field: "Area of Interest", operator: "within", value: "Downtown Sector 4", sourceScope: "all" },
-        { id: 2, scope: "time", field: "Timestamp", operator: "between", value: "2026-03-01 – 2026-03-07", sourceScope: "all" },
-        { id: 3, scope: "attribute", field: "Device Type", operator: "equals", value: "Mobile", sourceScope: "ds1" },
-      ],
-    },
-  ]);
+  const [groups, setGroups] = useState(INITIAL_GROUPS);
+  const [appliedGroups, setAppliedGroups] = useState(INITIAL_GROUPS);
+  const [collapseState, setCollapseState] = useState({ 1: true, 2: true, 3: true, 4: true });
 
   const [addingToGroup, setAddingToGroup] = useState(null);
   const [addStep, setAddStep] = useState(0);
-  const [newCondition, setNewCondition] = useState({ scope: "", field: "", operator: "", value: "", sourceScope: "all" });
+  const [newCondition, setNewCondition] = useState({ scope: "", field: "", operator: "", value: "" });
+
+  /* ── Bottom query builder (conterra-style, multi-query) ── */
+  const [bqOpen, setBqOpen] = useState(true);
+  const [bqCollapsed, setBqCollapsed] = useState(true);
+  const [bqQueries, setBqQueries] = useState([
+    { id: 1, name: "Query 1", source: "", link: "AND", spatialRel: "everywhere", conditions: [{ id: 1, field: "", operator: "", value: "" }] },
+  ]);
+  const [activeBqId, setActiveBqId] = useState(1);
+  const [bqSavedQueries, setBqSavedQueries] = useState([]);
+  const [bqShowLoad, setBqShowLoad] = useState(false);
 
   // Tooltip customization
   const [tooltipSelections, setTooltipSelections] = useState(INITIAL_TOOLTIP_SELECTIONS);
@@ -539,7 +608,7 @@ export default function DiscoverQueryBuilder() {
     return m;
   }, [sources]);
 
-  const filteredCounts = useMemo(() => simulateFilteredCount(baseCounts, groups), [baseCounts, groups]);
+  const filteredCounts = useMemo(() => simulateFilteredCount(baseCounts, appliedGroups), [baseCounts, appliedGroups]);
 
   const totalRecords = useMemo(() => Object.values(filteredCounts).reduce((s, n) => s + n, 0), [filteredCounts]);
 
@@ -632,9 +701,21 @@ export default function DiscoverQueryBuilder() {
 
   const removeCondition = (gid, cid) => setGroups((p) => p.map((g) => (g.id === gid ? { ...g, conditions: g.conditions.filter((c) => c.id !== cid) } : g)));
 
+  const collapseGroup = (gid) => setCollapseState((p) => ({ ...p, [gid]: !p[gid] }));
+
   const addGroup = () => {
     _gid++;
-    setGroups((p) => [...p, { id: _gid, name: `Group ${_gid}`, logic: "AND", conditions: [] }]);
+    setGroups((p) => [...p, { id: _gid, name: "New Group", sourceId: null, logic: "AND", isDefault: false, conditions: [] }]);
+    setCollapseState((p) => ({ ...p, [_gid]: false }));
+  };
+
+  const assignSource = (gid, newSourceId) => {
+    setGroups((p) => p.map((g) => {
+      if (g.id !== gid) return g;
+      const src = sources.find((s) => s.id === newSourceId);
+      const name = g.name === "New Group" && src ? src.name : g.name;
+      return { ...g, sourceId: newSourceId, name };
+    }));
   };
 
   const removeGroup = (gid) => setGroups((p) => p.filter((g) => g.id !== gid));
@@ -658,7 +739,7 @@ export default function DiscoverQueryBuilder() {
   const startAdd = (gid) => {
     setAddingToGroup(gid);
     setAddStep(0);
-    setNewCondition({ scope: "", field: "", operator: "", value: "", sourceScope: "all" });
+    setNewCondition({ scope: "", field: "", operator: "", value: "" });
   };
 
   const cancelAdd = () => { setAddingToGroup(null); setAddStep(0); };
@@ -714,7 +795,9 @@ export default function DiscoverQueryBuilder() {
   };
 
   const clearAll = () => {
-    setGroups([{ id: 1, name: "Group 1", logic: "AND", conditions: [] }]);
+    setGroups(INITIAL_GROUPS);
+    setAppliedGroups(INITIAL_GROUPS);
+    setCollapseState({ 1: true, 2: true, 3: true, 4: true });
     setSourceGroups(INITIAL_SOURCE_GROUPS);
     setQueryName("Untitled Query");
     setTooltipSelections(INITIAL_TOOLTIP_SELECTIONS);
@@ -733,6 +816,21 @@ export default function DiscoverQueryBuilder() {
           from { opacity: 0; }
           to   { opacity: 1; }
         }
+        /* ── BQ hover states (replaces inline style mutations) ── */
+        .bq-trigger:hover { background: ${t.bgHover} !important; }
+        .bq-qtab:not([aria-pressed="true"]):hover { background: ${t.bgHover} !important; }
+        .bq-collapse:hover { background: ${t.bgHover} !important; }
+        .bq-load-item:hover { border-color: ${t.borderMuted} !important; }
+        .bq-add-cond:hover {
+          border-color: ${t.borderSubtle} !important;
+          color: ${t.textPrimary} !important;
+          background: ${t.bgHover} !important;
+        }
+        .bq-rail-btn:hover:not(:disabled) { background: ${t.bgHover} !important; }
+        .bq-rail-btn:hover:not(:disabled) svg { color: ${t.textPrimary} !important; }
+        .bq-focus:focus-visible { box-shadow: ${focusRing} !important; outline: none; }
+        @keyframes bqSpin { to { transform: rotate(360deg); } }
+        .bq-focus:focus:not(:focus-visible) { box-shadow: none !important; }
         @media (prefers-reduced-motion: reduce) {
           *, *::before, *::after {
             animation-duration: 0.01ms !important;
@@ -740,7 +838,8 @@ export default function DiscoverQueryBuilder() {
           }
         }
       `}</style>
-      {/* ═══ SIDEBAR ═══ — always rendered, animated via transform */}
+      {/* ═══ SIDEBAR ═══ — disabled until prompted; wrap in {SHOW_SIDEBAR && (...)} to re-enable */}
+      {false && (<>
       {/* Collapsed expand button — fades in/out */}
       <button
         onClick={() => setPanelCollapsed(false)}
@@ -769,13 +868,13 @@ export default function DiscoverQueryBuilder() {
           pointerEvents: panelCollapsed ? "auto" : "none",
           transition: prefersReduced ? "none" : `opacity ${motion.medium} ${motion.easeOut}, transform ${motion.medium} ${motion.easeOut}`,
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(24, 24, 24, 0.7)")}
+        onMouseEnter={(e) => (e.currentTarget.style.background = t.bgHover)}
         onMouseLeave={(e) => (e.currentTarget.style.background = t.glassBg)}
         onMouseDown={(e) => (e.currentTarget.dataset.mousedown = "1")}
         onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
         onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
       >
-        <PanelLeftOpen size={18} color={t.yellow500} />
+        <ChevronRight size={14} color={t.textSecondary} />
       </button>
 
       {/* Panel — slides + fades */}
@@ -826,7 +925,6 @@ export default function DiscoverQueryBuilder() {
               {/* Section buttons */}
               {[
                 { key: "sources", icon: Layers, label: "Data Sources & Layers", count: sources.filter((s) => s.visible).length },
-                { key: "conditions", icon: Filter, label: "Conditions", count: totalConditions },
                 { key: "tooltip", icon: MessageSquareText, label: "Tooltip Fields", count: totalTooltipFields || undefined },
                 { key: "mapSettings", icon: Map, label: "Map Settings" },
               ].map((sec) => {
@@ -841,27 +939,27 @@ export default function DiscoverQueryBuilder() {
                     aria-pressed={isActive}
                     style={{
                       width: 44, height: 44, padding: 0,
-                      background: isActive ? t.bgField : "transparent",
+                      background: isActive ? t.bgHover : "transparent",
                       border: "none",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       cursor: "pointer", outline: "none", position: "relative",
                       transition: "background 0.12s, color 0.12s",
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.querySelector("svg").style.color = isActive ? t.textPrimary : t.textSecondary; }}
-                    onMouseLeave={(e) => { e.currentTarget.querySelector("svg").style.color = isActive ? t.textPrimary : t.textSubtle; }}
+                    onMouseEnter={(e) => { e.currentTarget.querySelector("svg").style.color = isActive ? t.textSecondary : t.textSecondary; }}
+                    onMouseLeave={(e) => { e.currentTarget.querySelector("svg").style.color = isActive ? t.textSecondary : t.textSubtle; }}
                     onMouseDown={(e) => (e.currentTarget.dataset.mousedown = "1")}
                     onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
                     onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
                   >
-                    <I size={16} color={isActive ? t.textPrimary : t.textSubtle} />
+                    <I size={14} color={isActive ? t.textSecondary : t.textSubtle} />
                     {sec.count !== undefined && sec.count > 0 && (
                       <span style={{
-                        position: "absolute", top: 5, right: 5,
-                        fontSize: 8, fontWeight: 700,
+                        position: "absolute", top: 3, right: 4,
+                        fontSize: 7, fontWeight: 700,
                         color: t.textInverse, background: t.textSecondary,
-                        borderRadius: 6, minWidth: 14, height: 14,
+                        borderRadius: 5, minWidth: 12, height: 12,
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        padding: `0 ${sp.xs - 1}px`, lineHeight: 1,
+                        padding: `0 2px`, lineHeight: 1,
                       }}>
                         {sec.count}
                       </span>
@@ -948,51 +1046,6 @@ export default function DiscoverQueryBuilder() {
               )}
 
               {/* CONDITIONS */}
-              {activeSection === "conditions" && (
-                <div style={{ padding: sp.md, animation: `sectionFadeIn ${motion.fast} ${motion.easeOut} both` }}>
-                  <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: t.textSubtle, marginBottom: sp.sm }}>CONDITIONS</div>
-                  {groups.map((group, gi) => (
-                    <div key={group.id}>
-                      {gi > 0 && <InterGroupLabel />}
-                      <ConditionGroup
-                        group={group}
-                        groupIndex={gi}
-                        groupCount={groups.length}
-                        sources={sources}
-                        canRemove={groups.length > 1}
-                        onToggleLogic={() => toggleGroupLogic(group.id)}
-                        onRemoveCondition={(cid) => removeCondition(group.id, cid)}
-                        onAddCondition={() => startAdd(group.id)}
-                        onRemoveGroup={() => removeGroup(group.id)}
-                        onRename={(name) => renameGroup(group.id, name)}
-                        onMoveUp={() => moveGroup(group.id, "up")}
-                        onMoveDown={() => moveGroup(group.id, "down")}
-                        isAdding={addingToGroup === group.id}
-                        addStep={addStep}
-                        newCondition={newCondition}
-                        onPickScope={pickScope}
-                        onPickField={pickField}
-                        onPickOp={pickOp}
-                        onConfirm={confirmAdd}
-                        onCancel={cancelAdd}
-                        onBack={goBack}
-                        onValueChange={(v) => setNewCondition((p) => ({ ...p, value: v }))}
-                        onSourceScopeChange={(v) => setNewCondition((p) => ({ ...p, sourceScope: v }))}
-                      />
-                    </div>
-                  ))}
-                  <button
-                    onClick={addGroup}
-                    style={{ ...addBtnStyle, marginTop: sp.sm }}
-                    onMouseEnter={addBtnHover} onMouseLeave={addBtnLeave}
-                    onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-                    onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-                  >
-                    <Plus size={11} /> Add Group
-                  </button>
-                </div>
-              )}
-
               {/* TOOLTIP CUSTOMIZATION */}
               {activeSection === "tooltip" && (
                 <div style={{ padding: sp.md, animation: `sectionFadeIn ${motion.fast} ${motion.easeOut} both` }}>
@@ -1054,6 +1107,7 @@ export default function DiscoverQueryBuilder() {
             </div>
           </div>
         </div>
+      </>)}
 
       {/* ═══ MAP AREA ═══ */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
@@ -1106,6 +1160,25 @@ export default function DiscoverQueryBuilder() {
 
       </div>
 
+      {/* ═══ BOTTOM QUERY BUILDER (conterra-style, multi-query) ═══ */}
+      <BottomQueryBuilder
+        open={bqOpen}
+        onToggle={() => setBqOpen((o) => !o)}
+        collapsed={bqCollapsed}
+        onCollapseToggle={() => setBqCollapsed((c) => !c)}
+        queries={bqQueries}
+        onQueriesChange={setBqQueries}
+        activeId={activeBqId}
+        onActiveChange={setActiveBqId}
+        sources={sources}
+        sourceGroups={sourceGroups}
+        savedQueries={bqSavedQueries}
+        onSave={(q) => setBqSavedQueries((prev) => [...prev.filter((s) => s.id !== q.id), q])}
+        onLoad={(q) => { setBqQueries((prev) => [...prev.filter((p) => p.id !== q.id), q]); setActiveBqId(q.id); }}
+        showLoad={bqShowLoad}
+        onShowLoadToggle={() => setBqShowLoad((o) => !o)}
+      />
+
       {/* ═══ SAVE MODAL ═══ */}
       {showSaveModal && (
         <SaveModal
@@ -1142,7 +1215,7 @@ function QueryBar({ queryName, setQueryName, isEditingName, setIsEditingName, on
   const startEditing = () => { setDraftName(queryName); setIsEditingName(true); };
 
   return (
-    <div style={{ flexShrink: 0, background: t.bgBase, borderBottom: `1px solid ${t.borderDark}`, minHeight: 44, boxSizing: "border-box", display: "flex", alignItems: "stretch" }}>
+    <div style={{ flexShrink: 0, background: t.bgBase, minHeight: 44, boxSizing: "border-box", display: "flex", alignItems: "stretch" }}>
 
         {/* Collapse — matches rail buttons exactly */}
         <button
@@ -1155,7 +1228,7 @@ function QueryBar({ queryName, setQueryName, isEditingName, setIsEditingName, on
           onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
           onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
         >
-          <PanelLeftClose size={16} color={t.textSubtle} />
+          <ChevronLeft size={14} color={t.textSubtle} />
         </button>
 
       <div style={{ display: "flex", alignItems: "center", gap: sp.sm, flex: 1, padding: `0 ${sp.md}px` }}>
@@ -1172,7 +1245,7 @@ function QueryBar({ queryName, setQueryName, isEditingName, setIsEditingName, on
               flex: 1, minWidth: 0,
               background: "transparent",
               border: "none",
-              borderBottom: `1px solid ${isDirty ? t.yellow500 : t.borderDark}`,
+              borderBottom: `1px solid ${t.textPrimary}`,
               borderRadius: 0,
               padding: `${sp.xs}px 2px`,
               marginBottom: -1,
@@ -1218,11 +1291,12 @@ function QueryBar({ queryName, setQueryName, isEditingName, setIsEditingName, on
 }
 
 
-function QBarIcon({ icon, title, onClick, accent }) {
+function QBarIcon({ icon, title, onClick, accent, style: styleProp, disabled = false }) {
   const [hovered, setHovered] = useState(false);
   return (
     <button
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
       title={title}
       aria-label={title}
       style={{
@@ -1238,8 +1312,9 @@ function QBarIcon({ icon, title, onClick, accent }) {
         color: accent ? t.textInverse : hovered ? t.textPrimary : t.textSecondary,
         cursor: "pointer",
         padding: 0,
-        transition: "background 0.15s, border-color 0.15s, color 0.15s",
+        transition: "background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s",
         outline: "none",
+        ...styleProp,
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -1820,7 +1895,7 @@ function InterGroupLabel() {
   );
 }
 
-function ConditionGroup({ group, groupIndex, groupCount, sources, canRemove, onToggleLogic, onRemoveCondition, onAddCondition, onRemoveGroup, onRename, onMoveUp, onMoveDown, isAdding, addStep, newCondition, onPickScope, onPickField, onPickOp, onConfirm, onCancel, onBack, onValueChange, onSourceScopeChange }) {
+function ConditionGroup({ group, groupIndex, groupCount, sources, canRemove, onToggleLogic, onRemoveCondition, onAddCondition, onRemoveGroup, onRename, onMoveUp, onMoveDown, onAssignSource, onCollapse, isAdding, addStep, newCondition, onPickScope, onPickField, onPickOp, onConfirm, onCancel, onBack, onValueChange }) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(group.name);
 
@@ -1830,71 +1905,114 @@ function ConditionGroup({ group, groupIndex, groupCount, sources, canRemove, onT
   };
 
   return (
-    <div style={{ marginBottom: sp.xs }}>
+    <div style={{ marginBottom: sp.xs, overflow: "hidden" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: sp.xs, padding: `${sp.xs}px ${sp.sm}px`, background: "transparent", borderBottom: `1px solid ${t.borderDark}` }}>
-        {/* Reorder arrows */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-          <button onClick={onMoveUp} disabled={groupIndex === 0} aria-label="Move group up" style={{ background: "none", border: "none", cursor: groupIndex === 0 ? "default" : "pointer", padding: 2, lineHeight: 1, opacity: groupIndex === 0 ? 0.25 : 1, outline: "none", borderRadius: 2 }}
-            onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-            onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-          >
-            <ArrowUp size={10} color={t.textSubtle} />
-          </button>
-          <button onClick={onMoveDown} disabled={groupIndex === groupCount - 1} aria-label="Move group down" style={{ background: "none", border: "none", cursor: groupIndex === groupCount - 1 ? "default" : "pointer", padding: 2, lineHeight: 1, opacity: groupIndex === groupCount - 1 ? 0.25 : 1, outline: "none", borderRadius: 2 }}
-            onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-            onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-          >
-            <ArrowDown size={10} color={t.textSubtle} />
-          </button>
-        </div>
+      <div style={{ display: "flex", alignItems: "center", gap: sp.xs, padding: `${sp.xs}px ${sp.sm}px`, background: "transparent", borderBottom: `1px solid ${t.borderDark}`, cursor: "pointer", minWidth: 0 }}
+        onClick={onCollapse}
+      >
+        {/* Collapse chevron */}
+        <span style={{ flexShrink: 0, lineHeight: 1, color: t.textSubtle, transition: "transform 0.15s" }}>
+          {group.collapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
+        </span>
+
+        {/* Reorder arrows — only for non-default */}
+        {!group.isDefault && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }} onClick={(e) => e.stopPropagation()}>
+            <button onClick={onMoveUp} disabled={groupIndex === 0} aria-label="Move group up" style={{ background: "none", border: "none", cursor: groupIndex === 0 ? "default" : "pointer", padding: 2, lineHeight: 1, opacity: groupIndex === 0 ? 0.25 : 1, outline: "none", borderRadius: 2 }}
+              onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
+              onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
+            >
+              <ArrowUp size={10} color={t.textSubtle} />
+            </button>
+            <button onClick={onMoveDown} disabled={groupIndex === groupCount - 1} aria-label="Move group down" style={{ background: "none", border: "none", cursor: groupIndex === groupCount - 1 ? "default" : "pointer", padding: 2, lineHeight: 1, opacity: groupIndex === groupCount - 1 ? 0.25 : 1, outline: "none", borderRadius: 2 }}
+              onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
+              onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
+            >
+              <ArrowDown size={10} color={t.textSubtle} />
+            </button>
+          </div>
+        )}
 
         {/* Group name — editable */}
-        {isRenaming ? (
-          <input
-            autoFocus
-            value={renameValue}
-            onChange={(e) => setRenameValue(e.target.value)}
-            onBlur={commitRename}
-            onKeyDown={(e) => e.key === "Enter" && commitRename()}
-            style={{ flex: 1, ...type.body, fontWeight: 600, color: t.textPrimary, background: t.bgField, border: `1px solid ${t.yellow500}`, borderRadius: 3, padding: `1px ${sp.sm}px`, outline: "none" }}
-          />
-        ) : (
-          <span
-            onClick={() => { setRenameValue(group.name); setIsRenaming(true); }}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === "Enter" && (setRenameValue(group.name), setIsRenaming(true))}
-            style={{ flex: 1, ...type.body, fontWeight: 600, color: t.textSecondary, cursor: "pointer", display: "flex", alignItems: "center", gap: sp.xs, outline: "none", borderRadius: 2 }}
-            title="Click to rename"
-            onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-            onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-          >
-            {group.name}
-            <Edit3 size={10} color={t.textSubtle} />
-          </span>
-        )}
+        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: sp.xs, minWidth: 0 }} onClick={(e) => e.stopPropagation()}>
+          {isRenaming ? (
+            <input
+              autoFocus
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={(e) => e.key === "Enter" && commitRename()}
+              style={{ flex: 1, ...type.body, fontWeight: 600, color: t.textPrimary, background: t.bgField, border: `1px solid ${t.yellow500}`, borderRadius: 3, padding: `1px ${sp.sm}px`, outline: "none" }}
+            />
+          ) : (
+            <span
+              onClick={() => { setRenameValue(group.name); setIsRenaming(true); }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === "Enter" && (setRenameValue(group.name), setIsRenaming(true))}
+              style={{ ...type.body, fontWeight: 600, color: t.textSecondary, cursor: "pointer", display: "flex", alignItems: "center", gap: sp.xs, outline: "none", borderRadius: 2, minWidth: 0 }}
+              title="Click to rename"
+              onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
+              onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
+            >
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{group.name}</span>
+              <Edit3 size={10} color={t.textSubtle} style={{ flexShrink: 0 }} />
+            </span>
+          )}
+        </div>
 
-        <button
-          onClick={onToggleLogic}
-          aria-label={`Toggle logic to ${group.logic === "AND" ? "OR" : "AND"}`}
-          style={{ padding: `2px ${sp.sm}px`, borderRadius: 3, border: `1px solid ${t.yellow700}`, background: t.yellow950, color: t.yellow500, ...type.caption, fontSize: 10, fontWeight: 700, cursor: "pointer", outline: "none" }}
-          onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
-          onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-        >
-          {group.logic}
-        </button>
-        {canRemove && (
-          <button onClick={onRemoveGroup} aria-label="Remove group" style={{ background: "none", border: "none", cursor: "pointer", padding: sp.xs, borderRadius: sp.xs, outline: "none" }}
+        {/* Source tag or picker */}
+        <div onClick={(e) => e.stopPropagation()}>
+          {group.sourceId === null ? (
+            <select
+              value=""
+              onChange={(e) => e.target.value && onAssignSource(e.target.value)}
+              aria-label="Assign data source"
+              style={{
+                background: t.bgField, border: `1px dashed ${t.yellow500}`,
+                color: t.yellow500, ...type.caption, fontSize: 10,
+                borderRadius: 3, padding: `2px ${sp.sm}px`, outline: "none", cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              <option value="" disabled>Assign source…</option>
+              {sources.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          ) : (() => {
+            const src = sources.find((s) => s.id === group.sourceId);
+            return src ? (
+              <span style={{ ...type.caption, fontSize: 9, padding: `2px ${sp.sm}px`, borderRadius: sp.xs, background: src.color + "22", color: src.color, fontWeight: 600, flexShrink: 0 }}>
+                {src.name}
+              </span>
+            ) : null;
+          })()}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={onToggleLogic}
+            aria-label={`Toggle logic to ${group.logic === "AND" ? "OR" : "AND"}`}
+            style={{ padding: `2px ${sp.sm}px`, borderRadius: 3, border: `1px solid ${t.yellow700}`, background: t.yellow950, color: t.yellow500, ...type.caption, fontSize: 10, fontWeight: 700, cursor: "pointer", outline: "none" }}
             onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
             onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
           >
-            <Trash2 size={12} color={t.textSubtle} />
+            {group.logic}
           </button>
-        )}
+          {canRemove && !group.isDefault && (
+            <button onClick={onRemoveGroup} aria-label="Remove group" style={{ background: "none", border: "none", cursor: "pointer", padding: sp.xs, borderRadius: sp.xs, outline: "none" }}
+              onFocus={(e) => (e.currentTarget.style.boxShadow = focusRing)}
+              onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
+            >
+              <Trash2 size={12} color={t.textSubtle} />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Condition rows */}
+      {/* Condition rows — collapsible */}
+      <Expandable open={!group.collapsed} duration={motion.medium}>
       <div style={{ padding: `${sp.sm}px ${sp.sm}px` }}>
         {group.conditions.map((cond, i) => (
           <div key={cond.id}>
@@ -1920,11 +2038,15 @@ function ConditionGroup({ group, groupIndex, groupCount, sources, canRemove, onT
               onCancel={onCancel}
               onBack={onBack}
               onValueChange={onValueChange}
-              onSourceScopeChange={onSourceScopeChange}
             />
           )}
         </Expandable>
 
+        {group.conditions.length === 0 && !isAdding && group.hint && (
+          <div style={{ ...type.caption, fontSize: 10, color: t.textSubtle, padding: `${sp.xs}px ${sp.sm}px`, lineHeight: 1.5, fontStyle: "italic" }}>
+            {group.hint}
+          </div>
+        )}
         {!isAdding && (
           <button
             onClick={onAddCondition}
@@ -1938,6 +2060,409 @@ function ConditionGroup({ group, groupIndex, groupCount, sources, canRemove, onT
           </button>
         )}
       </div>
+      </Expandable>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BOTTOM QUERY BUILDER — conterra-style inline conditions
+   ══════════════════════════════════════════════════════════════ */
+const BQ_MAX_QUERIES = 5;
+const BQ_RAIL_ITEM = 44; // Rail button height — used for collapsed maxHeight calculation
+const BQ_SHADOW_SM = "0 2px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3)";
+const BQ_SHADOW_LG = "0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)";
+const CHEVRON_SVG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23525252' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`;
+const BQ_INPUT_BASE = { ...dtInputStyle(false), flex: 1, fontSize: 12, padding: `${sp.xs}px ${sp.sm}px` };
+const BQ_SELECT_BASE = { ...BQ_INPUT_BASE, paddingRight: sp.xl + sp.sm, backgroundImage: CHEVRON_SVG, backgroundRepeat: "no-repeat", backgroundPosition: `right ${sp.sm}px center` };
+
+/* Inline rail button helper */
+function BqRailBtn({ icon: Icon, label, onClick, size = 16, disabled = false }) {
+  return (
+    <button className="bq-rail-btn bq-focus" onClick={disabled ? undefined : onClick} title={label} aria-label={label} disabled={disabled}
+      style={{ width: 44, height: 44, padding: 0, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: disabled ? "default" : "pointer", outline: "none", transition: "background 0.12s", opacity: disabled ? 0.3 : 1 }}
+    >
+      <Icon size={size} color={t.textSubtle} style={{ transition: "color 0.12s" }} />
+    </button>
+  );
+}
+
+export function BottomQueryBuilder({ open, onToggle, collapsed, onCollapseToggle, queries, onQueriesChange, activeId, onActiveChange, sources, sourceGroups, savedQueries, onSave, onLoad, showLoad, onShowLoadToggle }) {
+  const activeQuery = queries.find((q) => q.id === activeId) || queries[0];
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [confirmAction, setConfirmAction] = useState(null); // "reset" | "delete" | null
+  const [isRunning, setIsRunning] = useState(false);
+  const nextIdRef = useRef(2);
+
+  const updateQuery = (patch) =>
+    onQueriesChange((prev) => prev.map((q) => (q.id === activeId ? { ...q, ...patch } : q)));
+  const updateCondition = (condId, patch) =>
+    updateQuery({ conditions: activeQuery.conditions.map((c) => (c.id === condId ? { ...c, ...patch } : c)) });
+  const genId = () => { nextIdRef.current++; return nextIdRef.current; };
+  const addRow = () => { updateQuery({ conditions: [...activeQuery.conditions, { id: genId(), field: "", operator: "", value: "" }] }); };
+  const removeRow = (condId) => updateQuery({ conditions: activeQuery.conditions.filter((c) => c.id !== condId) });
+  const addQuery = () => {
+    if (queries.length >= BQ_MAX_QUERIES) return;
+    const qid = genId();
+    const cid = genId();
+    const newQ = { id: qid, name: `Query ${queries.length + 1}`, source: "", link: "AND", spatialRel: "everywhere", conditions: [{ id: cid, field: "", operator: "", value: "" }] };
+    onQueriesChange((prev) => [...prev, newQ]); onActiveChange(qid);
+  };
+  const removeQuery = (qid) => {
+    onQueriesChange((prev) => {
+      const next = prev.filter((q) => q.id !== qid);
+      if (next.length === 0) {
+        const newId = genId();
+        const cid = genId();
+        onActiveChange(newId);
+        return [{ id: newId, name: "Query 1", source: "", link: "AND", spatialRel: "everywhere", conditions: [{ id: cid, field: "", operator: "", value: "" }] }];
+      }
+      if (activeId === qid) onActiveChange(next[next.length - 1].id);
+      return next;
+    });
+  };
+  const commitRename = () => { if (renameValue.trim()) updateQuery({ name: renameValue.trim() }); setIsRenaming(false); };
+  const resetQuery = () => { const cid = genId(); updateQuery({ source: "", link: "AND", spatialRel: "everywhere", conditions: [{ id: cid, field: "", operator: "", value: "" }] }); setConfirmAction(null); };
+  const confirmAndRemove = () => { removeQuery(activeQuery.id); setConfirmAction(null); };
+
+  const handleSave = () => { if (activeQuery) onSave({ ...activeQuery, savedAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) }); };
+  const handleLoad = (q) => { onLoad(q); onShowLoadToggle(); };
+
+  const canSearch = activeQuery && activeQuery.conditions.length > 0 && activeQuery.conditions.every((c) => c.field && c.operator && c.value);
+  const canSave = activeQuery && activeQuery.conditions.some((c) => c.field);
+  const isDirty = activeQuery && (activeQuery.conditions.length > 1 || activeQuery.conditions.some((c) => c.field));
+  const panelWidth = "min(320px, calc(100vw - 16px))";
+
+  /* ── Trigger button (closed) — matches top-left collapsed icon ── */
+  if (!open) {
+    return (
+      <button className="bq-trigger bq-focus" onClick={onToggle}
+        title="Open Quick Query"
+        aria-label="Open Quick Query"
+        style={{
+          position: "absolute", bottom: sp.sm, left: sp.sm, zIndex: 9,
+          width: 44, height: 44, padding: 0,
+          borderRadius: sp.xs,
+          border: `1px solid ${t.glassBorder}`,
+          background: t.glassBg,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", outline: "none",
+          transition: `opacity ${motion.medium} ${motion.easeOut}, transform ${motion.medium} ${motion.easeOut}, background ${motion.fast}`,
+        }}
+      >
+        <Search size={18} color={t.textSecondary} />
+      </button>
+    );
+  }
+
+  if (!activeQuery) return null;
+
+  const condInput = (cond) => {
+    const ops = cond.field ? getOperatorsForField(cond.field) : [];
+    const inputType = DATE_FIELDS.includes(cond.field) ? "date" : NUMERIC_FIELDS.includes(cond.field) ? "number" : "text";
+    const placeholder = SPATIAL_FIELDS.includes(cond.field) ? "GeoJSON / WKT…" : "Value…";
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: sp.xs, padding: `${sp.sm}px`, background: t.bgField, borderRadius: sp.xs, border: `1px solid ${t.borderDark}` }}>
+        {/* Row 1: Field + Remove */}
+        <div style={{ display: "flex", gap: sp.xs, alignItems: "center" }}>
+          <select value={cond.field}
+            onChange={(e) => { const f = e.target.value; const nOps = getOperatorsForField(f); updateCondition(cond.id, { field: f, operator: nOps[0] || "", value: "" }); }}
+            style={{ ...BQ_SELECT_BASE, cursor: "pointer" }}
+          >
+            <option value="" disabled>Field…</option>
+            {Object.entries(FIELD_OPTIONS).map(([scope, fields]) => (
+              <optgroup key={scope} label={SCOPE_OPTIONS.find((s) => s.value === scope)?.label || scope}>
+                {fields.map((f) => <option key={f.name} value={f.name}>{f.name}</option>)}
+              </optgroup>
+            ))}
+          </select>
+          {activeQuery.conditions.length > 1 && (
+            <button onClick={() => removeRow(cond.id)} className="bq-focus" aria-label="Remove condition"
+              style={{ background: "none", border: "none", cursor: "pointer", padding: sp.sm, borderRadius: sp.xs, outline: "none", flexShrink: 0, lineHeight: 1, minWidth: 28, minHeight: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <X size={11} color={t.textSubtle} />
+            </button>
+          )}
+        </div>
+        {/* Row 2: Operator + Value */}
+        <div style={{ display: "flex", gap: sp.xs }}>
+          <select value={cond.operator} onChange={(e) => updateCondition(cond.id, { operator: e.target.value })}
+            disabled={!cond.field}
+            style={{ ...BQ_SELECT_BASE, cursor: cond.field ? "pointer" : "default", opacity: cond.field ? 1 : 0.4 }}
+          >
+            <option value="" disabled>Operator…</option>
+            {ops.map((op) => <option key={op} value={op}>{op}</option>)}
+          </select>
+          <input type={inputType} value={cond.value} placeholder={placeholder}
+            onChange={(e) => updateCondition(cond.id, { value: e.target.value })}
+            disabled={!cond.operator}
+            style={{ ...BQ_INPUT_BASE, opacity: cond.operator ? 1 : 0.4 }}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  /* ── Panel (open) ── */
+  return (
+    <div style={{
+      position: "absolute", bottom: sp.sm, left: sp.sm, zIndex: 10,
+      width: collapsed ? 44 : panelWidth,
+      maxHeight: collapsed ? (queries.length + 5) * BQ_RAIL_ITEM + sp.xs * 2 + 1 : 460,
+      background: t.glassBg, border: `1px solid ${t.glassBorder}`, borderRadius: sp.xs,
+      boxShadow: collapsed ? BQ_SHADOW_SM : BQ_SHADOW_LG,
+      display: "flex", flexDirection: "row", overflow: "hidden",
+      willChange: "width",
+      transition: collapsed
+        ? `width ${motion.medium} ${motion.easeOutExpo}, max-height ${motion.medium} ${motion.easeOutExpo}, box-shadow ${motion.medium} ${motion.easeOut}`
+        : `width ${motion.slow} ${motion.easeOutExpo}, max-height ${motion.slow} ${motion.easeOutExpo} 80ms, box-shadow ${motion.slow} ${motion.easeOut}`,
+    }}>
+      {/* ── Rail ── */}
+      <div style={{
+        width: 44, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center",
+        background: t.bgBase, borderRight: `1px solid ${collapsed ? "transparent" : t.borderDark}`, paddingTop: sp.xs, gap: 1,
+        transition: `border-color ${motion.medium} ${motion.easeOutExpo}`,
+      }}>
+        {/* Query tabs */}
+        {queries.map((q) => {
+          const isActive = q.id === activeId;
+          const condCount = q.conditions.filter((c) => c.field).length;
+          return (
+            <button key={q.id} className="bq-qtab bq-focus" onClick={() => { onActiveChange(q.id); if (collapsed) onCollapseToggle(); if (showLoad) onShowLoadToggle(); setConfirmAction(null); }}
+              title={q.name} aria-label={q.name} aria-pressed={isActive}
+              style={{
+                width: 44, height: 44, padding: 0,
+                background: isActive ? t.bgHover : "transparent",
+                border: "none", display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", outline: "none", position: "relative",
+                transition: `background ${motion.fast} ${motion.easeOut}`,
+              }}
+            >
+              <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 500, color: isActive ? t.textPrimary : t.textSubtle, transition: `color ${motion.fast} ${motion.easeOut}` }}>
+                {`Q${queries.indexOf(q) + 1}`}
+              </span>
+              {condCount > 0 && (
+                <span style={{
+                  position: "absolute", top: sp.xs - 1, right: sp.xs, fontSize: 7, fontWeight: 700,
+                  color: t.textInverse, background: t.textSecondary, borderRadius: sp.xs + 1, minWidth: 12, height: 12,
+                  display: "flex", alignItems: "center", justifyContent: "center", padding: `0 ${sp.xs - 2}px`, lineHeight: 1,
+                }}>{condCount}</span>
+              )}
+            </button>
+          );
+        })}
+
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* + New Query */}
+        <BqRailBtn icon={Plus} label={queries.length >= BQ_MAX_QUERIES ? `Max ${BQ_MAX_QUERIES} queries` : "New query"} onClick={addQuery} disabled={queries.length >= BQ_MAX_QUERIES} />
+
+        {/* Load */}
+        <BqRailBtn icon={FolderOpen} label="Load saved query" onClick={onShowLoadToggle} />
+
+        {/* Collapse/Expand — bottom, icon rotates */}
+        <button className="bq-collapse bq-focus" onClick={onCollapseToggle} title={collapsed ? "Expand" : "Collapse"} aria-label={collapsed ? "Expand" : "Collapse"} aria-pressed={collapsed}
+          style={{ width: 44, height: 44, padding: 0, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", outline: "none", transition: "background 0.12s" }}
+        >
+          <ChevronLeft size={14} color={t.textSubtle} style={{ transition: `transform ${motion.medium} ${motion.easeOutExpo}`, transform: collapsed ? "rotate(180deg)" : "rotate(0deg)" }} />
+        </button>
+      </div>
+
+      {/* ── Content (hidden when collapsed, kept mounted to preserve state) ── */}
+        <div style={{
+          flex: collapsed ? 0 : 1, width: collapsed ? 0 : "auto", maxHeight: collapsed ? 0 : 9999,
+          overflow: "hidden", display: "flex", flexDirection: "column",
+          opacity: collapsed ? 0 : 1,
+          transform: collapsed ? "translateX(-6px) scale(0.98)" : "translateX(0) scale(1)",
+          transformOrigin: "left center",
+          transition: collapsed
+            ? `opacity 100ms ${motion.easeIn}, transform 100ms ${motion.easeIn}, flex ${motion.fast} ${motion.easeOutExpo} 100ms, width ${motion.fast} ${motion.easeOutExpo} 100ms, max-height 100ms ${motion.easeIn}`
+            : `flex ${motion.slow} ${motion.easeOutExpo}, width ${motion.slow} ${motion.easeOutExpo}, max-height ${motion.medium} ${motion.easeOutExpo}, opacity ${motion.medium} ${motion.easeOutExpo} 120ms, transform ${motion.medium} ${motion.easeOutExpo} 120ms`,
+        }}>
+
+          {/* Load overlay */}
+          {showLoad ? (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: sp.sm, padding: `${sp.sm}px ${sp.md}px`, borderBottom: `1px solid ${t.borderDark}`, flexShrink: 0 }}>
+                <FolderOpen size={14} color={t.textSecondary} style={{ flexShrink: 0 }} />
+                <span style={{ ...type.subheading, fontSize: 12, color: t.textPrimary }}>Load Saved Query</span>
+                <div style={{ flex: 1 }} />
+                <button onClick={onShowLoadToggle} className="bq-focus" aria-label="Close"
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: sp.xs, borderRadius: sp.xs, outline: "none" }}
+                ><X size={14} color={t.textSubtle} /></button>
+              </div>
+              <div style={{ flex: 1, overflowY: "auto", padding: sp.md }}>
+                {savedQueries.length === 0 ? (
+                  <div style={{ ...type.secondary, color: t.textSubtle, textAlign: "center", padding: sp.xl, fontStyle: "italic" }}>
+                    No saved queries yet. Use the save icon to save the active query.
+                  </div>
+                ) : savedQueries.map((sq) => (
+                  <button className="bq-load-item bq-focus" key={sq.id} onClick={() => handleLoad(sq)}
+                    style={{
+                      width: "100%", textAlign: "left", display: "flex", flexDirection: "column", gap: 2,
+                      padding: `${sp.sm}px ${sp.md}px`, marginBottom: sp.xs,
+                      background: t.bgField, border: `1px solid ${t.borderDark}`, borderRadius: sp.xs,
+                      color: t.textPrimary, cursor: "pointer", outline: "none", transition: "border-color 0.12s",
+                    }}
+                  >
+                    <span style={{ ...type.body, fontSize: 12, fontWeight: 600 }}>{sq.name}</span>
+                    <span style={{ ...type.caption, fontSize: 9, color: t.textSubtle }}>
+                      {sq.conditions.filter((c) => c.field).length} conditions · {sq.savedAt || "unsaved"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Header — matches top-left QueryBar pattern */}
+              <div style={{ flexShrink: 0, background: t.bgBase, minHeight: 44, boxSizing: "border-box", display: "flex", flexDirection: "column", paddingBottom: sp.sm }}>
+                {/* Row 1: Name + actions */}
+                <div style={{ display: "flex", alignItems: "center", flex: 1, padding: `0 ${sp.sm}px`, minHeight: 44 }}>
+                  {isRenaming ? (
+                    <input autoFocus value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)} onBlur={commitRename}
+                      onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setIsRenaming(false); }}
+                      style={{ flex: 1, minWidth: 0, ...type.subheading, color: t.textPrimary, background: "transparent", border: "none", borderBottom: `1px solid ${t.textPrimary}`, borderRadius: 0, padding: `${sp.xs}px 2px`, outline: "none" }}
+                    />
+                  ) : (
+                    <button type="button" className="bq-focus" onClick={() => { setRenameValue(activeQuery.name); setIsRenaming(true); }}
+                      style={{ flex: 1, minWidth: 0, ...type.subheading, cursor: "text", padding: `${sp.xs}px 2px`, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", outline: "none", color: t.textPrimary, background: "none", border: "none", textAlign: "left" }}
+                    >
+                      {activeQuery.name}
+                    </button>
+                  )}
+                  <QBarIcon icon={<Save size={14} />} title="Save query" onClick={handleSave} disabled={!canSave} style={{ opacity: canSave ? 1 : 0.3 }} />
+                  <QBarIcon icon={<RotateCcw size={14} />} title="Reset conditions" onClick={() => setConfirmAction("reset")} disabled={!isDirty} style={{ opacity: isDirty ? 1 : 0.3 }} />
+                  {/* Delete */}
+                  <QBarIcon icon={<Trash2 size={14} color={t.danger} />} title="Delete query" onClick={() => setConfirmAction("delete")} />
+                </div>
+                {/* Row 2: Source + AND/OR */}
+                <div style={{ display: "flex", alignItems: "center", gap: sp.sm, marginTop: sp.xs, padding: `0 ${sp.sm}px` }}>
+                  <select value={activeQuery.source} onChange={(e) => updateQuery({ source: e.target.value })}
+                    style={{ flex: 1, fontSize: 12, padding: `${sp.xs}px ${sp.sm}px`, paddingRight: sp.xl + sp.sm, cursor: "pointer", color: activeQuery.source ? t.textPrimary : t.textSubtle, background: t.bgField, border: "none", borderRadius: sp.xs + 2, outline: "none", colorScheme: "dark", WebkitAppearance: "none", appearance: "none", backgroundImage: CHEVRON_SVG, backgroundRepeat: "no-repeat", backgroundPosition: `right ${sp.sm}px center` }}
+                  >
+                    <option value="" disabled>Select Source…</option>
+                    {(sourceGroups || []).map((grp) => (
+                      <optgroup key={grp.id} label={grp.name}>
+                        {grp.sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <div style={{ width: 72, flexShrink: 0 }}>
+                    <SegmentedControl options={["AND", "OR"]} value={activeQuery.link} onChange={(v) => updateQuery({ link: v })} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Confirmation bar — slides in for destructive actions */}
+              {confirmAction && (
+                <div role="status" aria-live="polite" style={{
+                  display: "flex", alignItems: "center", gap: sp.sm,
+                  padding: `${sp.sm}px ${sp.md}px`,
+                  background: confirmAction === "delete" ? t.danger + "18" : t.bgRaised,
+                  borderBottom: `1px solid ${confirmAction === "delete" ? t.danger + "40" : t.borderMuted}`,
+                  flexShrink: 0,
+                  animation: `sectionFadeIn ${motion.fast} ${motion.easeOut} both`,
+                }}>
+                  <span style={{ ...type.secondary, fontSize: 11, color: confirmAction === "delete" ? t.danger : t.textPrimary, flex: 1 }}>
+                    {confirmAction === "delete" ? "Delete this query?" : "Reset all conditions?"}
+                  </span>
+                  <button className="bq-focus" onClick={() => setConfirmAction(null)}
+                    style={{ background: "none", border: `1px solid ${t.borderMuted}`, borderRadius: sp.xs, color: t.textSecondary, fontSize: 11, padding: `3px ${sp.sm}px`, cursor: "pointer", outline: "none" }}
+                  >Cancel</button>
+                  <button className="bq-focus" onClick={confirmAction === "delete" ? confirmAndRemove : resetQuery}
+                    style={{
+                      background: confirmAction === "delete" ? t.danger : t.textSecondary,
+                      border: "none", borderRadius: sp.xs,
+                      color: t.textInverse,
+                      fontSize: 11, fontWeight: 600, padding: `3px ${sp.md}px`, cursor: "pointer", outline: "none",
+                    }}
+                  >{confirmAction === "delete" ? "Delete" : "Reset"}</button>
+                </div>
+              )}
+
+              {/* Condition rows + add button — scrollable area */}
+              <div style={{ flex: 1, overflowY: "auto", padding: `${sp.sm}px ${sp.sm}px`, display: "flex", flexDirection: "column", gap: 0 }}>
+                {/* Condition rows */}
+                {activeQuery.conditions.map((cond, i) => (
+                  <div key={cond.id}>
+                    {i > 0 && (
+                      <div style={{ textAlign: "center", padding: `3px 0` }}>
+                        <span style={{ ...type.caption, fontSize: 8, fontWeight: 600, color: t.borderSubtle, letterSpacing: "0.06em" }}>{activeQuery.link}</span>
+                      </div>
+                    )}
+                    {condInput(cond)}
+                  </div>
+                ))}
+
+                {/* + Condition — always visible, full width */}
+                <button className="bq-add-cond bq-focus" onClick={addRow}
+                  title="Add condition" aria-label="Add condition"
+                  style={{ width: "100%", marginTop: sp.sm, minHeight: 36, background: "none", border: `1px dashed ${t.borderMuted}`, borderRadius: sp.xs, color: t.textSubtle, fontSize: 12, padding: `${sp.sm}px`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: sp.xs, outline: "none", transition: `border-color ${motion.fast}, color ${motion.fast}, background ${motion.fast}` }}
+                ><Filter size={12} /> Condition</button>
+              </div>
+
+              {/* Footer — toggle left, run query right */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: sp.sm,
+                padding: `${sp.sm}px ${sp.sm}px`, borderTop: `1px solid ${t.borderDark}`, flexShrink: 0,
+              }}>
+                {/* Everywhere / Viewport toggle — icon + text */}
+                <div style={{ display: "flex", background: t.bgField, borderRadius: sp.xs, border: `1px solid ${t.borderDark}`, padding: 2, gap: 1 }}>
+                  {[
+                    { key: "everywhere", icon: Globe, label: "All", ariaLabel: "Search everywhere" },
+                    { key: "current_extent", icon: SquareDashed, label: "View", ariaLabel: "Search current viewport" },
+                  ].map((opt) => {
+                    const isOn = activeQuery.spatialRel === opt.key;
+                    const I = opt.icon;
+                    return (
+                      <button className="bq-focus" key={opt.key} onClick={() => updateQuery({ spatialRel: opt.key })}
+                        title={opt.ariaLabel || opt.label} aria-label={opt.ariaLabel || opt.label} aria-pressed={isOn}
+                        style={{
+                          padding: `${sp.sm}px ${sp.md}px`, minHeight: 32, position: "relative", zIndex: 1,
+                          background: isOn ? t.bgRaised : "transparent",
+                          border: isOn ? `1px solid ${t.borderMuted}` : "1px solid transparent",
+                          borderRadius: sp.xs - 1, cursor: "pointer", outline: "none",
+                          display: "flex", alignItems: "center", gap: sp.xs,
+                          fontSize: 11, fontWeight: isOn ? 600 : 400,
+                          color: isOn ? t.textPrimary : t.textSubtle,
+                          transition: `background ${motion.fast}, border-color ${motion.fast}, color ${motion.fast}`,
+                        }}
+                      >
+                        <I size={12} /> {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ flex: 1 }} />
+                {/* Run Query — icon + text, spinner while running */}
+                <button className="bq-focus" disabled={!canSearch || isRunning}
+                  onClick={() => { setIsRunning(true); setTimeout(() => setIsRunning(false), 3000); }}
+                  title={isRunning ? "Running…" : "Run query"}
+                  aria-label={isRunning ? "Query running" : "Run query"}
+                  style={{
+                    padding: `${sp.sm}px ${sp.md}px`, minHeight: 32, borderRadius: sp.xs, border: "none",
+                    background: isRunning ? t.yellow500 : canSearch ? t.yellow500 : t.bgHover,
+                    color: isRunning ? t.textInverse : canSearch ? t.textInverse : t.textSubtle,
+                    fontSize: 12, fontWeight: 600, cursor: canSearch && !isRunning ? "pointer" : "default",
+                    display: "flex", alignItems: "center", gap: sp.xs, outline: "none", flexShrink: 0,
+                    transition: `background ${motion.fast}, color ${motion.fast}`,
+                  }}
+                >
+                  {isRunning ? (
+                    <span style={{ width: 13, height: 13, border: `2px solid ${t.textInverse}40`, borderTopColor: t.textInverse, borderRadius: "50%", animation: "bqSpin 0.6s linear infinite", flexShrink: 0 }} />
+                  ) : (
+                    <Search size={13} />
+                  )}
+                  {isRunning ? "Running…" : "Run Query"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
     </div>
   );
 }
@@ -2197,7 +2722,93 @@ function DateTimeValueInput({ operator, value, onChange, onConfirm }) {
 /* ══════════════════════════════════════════════════════════════
    ADD CONDITION FLOW — GAP 1: source scope selector
    ══════════════════════════════════════════════════════════════ */
-function AddFlow({ step, nc, sources, onPickScope, onPickField, onPickOp, onConfirm, onCancel, onValueChange, onSourceScopeChange, onBack }) {
+/* ══════════════════════════════════════════════════════════════
+   SPATIAL VALUE INPUT — boundary geometry or lat/lng bounding box
+   ══════════════════════════════════════════════════════════════ */
+function SpatialValueInput({ value, onChange, onConfirm }) {
+  const [mode, setMode] = useState("Boundary");
+  const [coords, setCoords] = useState({ n: "", s: "", e: "", w: "" });
+  const [focused, setFocused] = useState(null);
+
+  const latlngValid =
+    coords.n !== "" && coords.s !== "" && coords.e !== "" && coords.w !== "" &&
+    parseFloat(coords.n) > parseFloat(coords.s);
+  const isValid = mode === "Boundary" ? !!value.trim() : latlngValid;
+
+  const handleCoord = (key, val) => {
+    const next = { ...coords, [key]: val };
+    setCoords(next);
+    onChange(`N:${next.n} S:${next.s} E:${next.e} W:${next.w}`);
+  };
+
+  const handleModeChange = (m) => {
+    setMode(m);
+    onChange("");
+    setCoords({ n: "", s: "", e: "", w: "" });
+  };
+
+  const coordInput = (key, label, placeholder) => (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+      <DTFieldLabel>{label}</DTFieldLabel>
+      <input
+        type="number"
+        placeholder={placeholder}
+        value={coords[key]}
+        onChange={(e) => handleCoord(key, e.target.value)}
+        style={dtInputStyle(focused === key)}
+        onFocus={() => setFocused(key)}
+        onBlur={() => setFocused(null)}
+      />
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
+      <SegmentedControl options={["Boundary", "Lat / Lng"]} value={mode} onChange={handleModeChange} />
+
+      {mode === "Boundary" && (
+        <textarea
+          autoFocus
+          rows={5}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={"Paste GeoJSON or WKT geometry…"}
+          style={{
+            width: "100%", padding: `${sp.sm}px ${sp.md}px`, ...type.body, fontSize: 11,
+            borderRadius: sp.sm, border: `1px solid ${focused === "ta" ? t.yellow500 : t.borderSubtle}`,
+            background: t.bgField, color: t.textPrimary, outline: "none",
+            resize: "vertical", boxSizing: "border-box", transition: "border-color 0.15s",
+            fontFamily: "monospace", lineHeight: 1.5,
+          }}
+          onFocus={() => setFocused("ta")}
+          onBlur={() => setFocused(null)}
+        />
+      )}
+
+      {mode === "Lat / Lng" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: sp.xs }}>
+          <div style={{ display: "flex", gap: sp.xs }}>
+            {coordInput("n", "North (lat max)", "e.g. 51.5")}
+            {coordInput("s", "South (lat min)", "e.g. 51.4")}
+          </div>
+          <div style={{ display: "flex", gap: sp.xs }}>
+            {coordInput("e", "East (lng max)", "e.g. -0.1")}
+            {coordInput("w", "West (lng min)", "e.g. -0.2")}
+          </div>
+          {coords.n && coords.s && parseFloat(coords.n) <= parseFloat(coords.s) && (
+            <span style={{ ...type.caption, fontSize: 10, color: t.danger }}>North must be greater than South</span>
+          )}
+        </div>
+      )}
+
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <DTConfirmButton disabled={!isValid} onClick={onConfirm} />
+      </div>
+    </div>
+  );
+}
+
+function AddFlow({ step, nc, sources, onPickScope, onPickField, onPickOp, onConfirm, onCancel, onValueChange, onBack }) {
   const labels = ["What kind of filter?", "Choose a field", "How should it match?", "Set the value"];
 
   /* Shared hover helper for buttons */
@@ -2329,6 +2940,15 @@ function AddFlow({ step, nc, sources, onPickScope, onPickField, onPickOp, onConf
               onConfirm={onConfirm}
             />
           )
+          : SPATIAL_FIELDS.includes(nc.field)
+          ? (
+            <SpatialValueInput
+              key={nc.operator}
+              value={nc.value}
+              onChange={onValueChange}
+              onConfirm={onConfirm}
+            />
+          )
           : (
             <div style={{ display: "flex", flexDirection: "column", gap: sp.sm }}>
               <div style={{ display: "flex", gap: sp.sm, alignItems: "stretch" }}>
@@ -2337,7 +2957,7 @@ function AddFlow({ step, nc, sources, onPickScope, onPickField, onPickOp, onConf
                   value={nc.value}
                   onChange={(e) => onValueChange(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && nc.value && onConfirm()}
-                  placeholder={nc.scope === "spatial" ? "e.g. Downtown Sector 4" : "Enter value\u2026"}
+                  placeholder="Enter value…"
                   style={{
                     flex: 1, padding: `${sp.sm}px ${sp.md}px`, ...type.body, fontSize: 12,
                     borderRadius: sp.sm, border: `1px solid ${t.borderSubtle}`, background: t.bgField,
@@ -2368,27 +2988,7 @@ function AddFlow({ step, nc, sources, onPickScope, onPickField, onPickOp, onConf
           )
       )}
 
-      {/* Source scope — collapsed into a subtle link, only shows when non-default */}
-      <div style={{ display: "flex", alignItems: "center", gap: sp.sm, ...type.secondary }}>
-        <span style={{ color: t.textSubtle, fontSize: 10 }}>Applies to:</span>
-        <select
-          value={nc.sourceScope}
-          onChange={(e) => onSourceScopeChange(e.target.value)}
-          aria-label="Source scope"
-          style={{
-            background: "transparent", border: "none", borderBottom: `1px dashed ${t.borderSubtle}`,
-            color: nc.sourceScope === "all" ? t.textSubtle : t.textHighlighted,
-            ...type.secondary, fontSize: 10, padding: `1px ${sp.xs}px`, outline: "none", cursor: "pointer",
-          }}
-        >
-          <option value="all">all sources</option>
-          {sources.filter((s) => s.visible).map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Live read-back — richer presentation */}
+      {/* Live read-back */}
       {step >= 1 && (nc.field || nc.operator) && (
         <div style={{
           padding: `${sp.sm}px ${sp.md}px`, borderRadius: sp.sm, background: t.yellow950,
@@ -2397,11 +2997,6 @@ function AddFlow({ step, nc, sources, onPickScope, onPickField, onPickOp, onConf
         }}>
           <Filter size={12} color={t.yellow500} style={{ flexShrink: 0 }} />
           <span style={{ flex: 1 }}>{readBack(nc)}</span>
-          {nc.sourceScope !== "all" && (
-            <span style={{ ...type.caption, fontSize: 9, padding: `2px ${sp.sm}px`, borderRadius: sp.xs, background: t.bgHover, color: t.textSecondary }}>
-              {sources.find((s) => s.id === nc.sourceScope)?.name}
-            </span>
-          )}
         </div>
       )}
     </div>
@@ -2990,7 +3585,7 @@ function DevicePanel({ device, onClose }) {
           onFocus={(e) => { if (!e.currentTarget.dataset.mousedown) e.currentTarget.style.boxShadow = focusRing; }}
           onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; delete e.currentTarget.dataset.mousedown; }}
         >
-          <PanelLeftClose size={16} color={t.textSubtle} />
+          <ChevronLeft size={14} color={t.textSubtle} />
         </button>
 
         {/* Title + close action — same flex row as QueryBar's name+icons slot */}
