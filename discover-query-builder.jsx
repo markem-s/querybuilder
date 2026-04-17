@@ -3396,17 +3396,6 @@ function MapToolbar({ mapRef }) {
   return (
     <div style={{ width: "100%", height: 44, display: "flex", flexDirection: "row", alignItems: "center", background: "transparent", boxSizing: "border-box", position: "relative", paddingLeft: sp.xs, paddingRight: sp.xs }}>
 
-      {/* ── Left group ── */}
-      <div style={{ display: "flex", flexDirection: "row", alignItems: "center" }}>
-        <ToolbarBtn icon={Flag}     label="Flag" />
-        <ToolbarDivider />
-        <ToolbarBtn icon={Layers}   label="Layers" />
-        <ToolbarBtn icon={Ruler}    label="Measure" />
-        <ToolbarBtn icon={Pentagon} label="Draw Shape" />
-        <ToolbarDivider />
-        <ToolbarBtn icon={Box}      label="3D View" />
-      </div>
-
       {/* ── Spacer ── */}
       <div style={{ flex: 1 }} />
 
@@ -3432,8 +3421,6 @@ function MapToolbar({ mapRef }) {
         >
           <Search size={16} color={searchOpen ? t.textPrimary : t.textSubtle} />
         </button>
-
-        <ToolbarDivider />
 
         {/* Zoom in */}
         <button
